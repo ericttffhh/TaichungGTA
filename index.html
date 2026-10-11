@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>臺中狂飆 · 去臺中狂飆 · TAICHUNG RUSH</title>
+  <meta name="description" content="《臺中狂飆》去臺中狂飆 — 在瀏覽器裡暢遊開放世界的台中：騎機車穿梭台灣大道、台中火車站、綠川、第二市場與夜市。TAICHUNG RUSH: an open-world Taichung in your browser.">
+  <meta name="theme-color" content="#07080c">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&family=Orbitron:wght@700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- ========================================================
+       Taipei-Rush 經典載入畫面 (Loader)
+       ======================================================== -->
+  <div id="loader" class="loader-active">
+    <div class="ld-grade"></div>
+
+    <div class="ld-logo">
+      <svg viewBox="0 0 520 220" role="img" aria-label="臺中狂飆 去臺中狂飆">
+        <g font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">
+          <rect x="6" y="6" width="112" height="208" rx="6" fill="#d81f2a" stroke="#09090c" stroke-width="7"/>
+          <rect x="16" y="16" width="92" height="188" fill="none" stroke="#fff" stroke-width="2.6" opacity=".92"/>
+          <text x="62" y="100" font-size="76" font-weight="900" fill="#fff" text-anchor="middle">臺</text>
+          <text x="62" y="186" font-size="76" font-weight="900" fill="#fff" text-anchor="middle">中</text>
+          <g font-size="142" font-weight="900" stroke="#09090c" stroke-width="6" paint-order="stroke" transform="skewX(-6)">
+            <text x="156" y="142" fill="#d81f2a">狂飆</text>
+            <text x="150" y="136" fill="#fff">狂飆</text>
+          </g>
+          <rect x="136" y="162" width="250" height="48" fill="#09090c"/>
+          <text x="152" y="197" font-size="28" font-weight="800" fill="#fff" letter-spacing="7">去臺中狂飆</text>
+          <text x="395" y="182" font-size="14" font-weight="800" fill="#ff4b52" letter-spacing="3.2" font-family="'Orbitron','Bebas Neue',sans-serif">TAICHUNG</text>
+          <text x="395" y="200" font-size="14" font-weight="800" fill="#fff" letter-spacing="3.2" font-family="'Orbitron','Bebas Neue',sans-serif">RUSH</text>
+        </g>
+      </svg>
+    </div>
+
+    <div class="ld-tip">
+      <div class="ld-tip-k">臺中小知識</div>
+      <div class="ld-tips" id="ld-tips-text">載入中...</div>
+    </div>
+
+    <div class="ld-prog">
+      <div class="ld-row">
+        <div class="ld-spin"></div>
+        <div class="ld-stage">
+          <b id="ld-stage">鋪設街道</b>
+          <small id="ld-stage-en">Laying the streets</small>
+        </div>
+        <div class="ld-pct" id="ld-pct">0<i>%</i></div>
+      </div>
+      <div class="ld-track">
+        <div class="ld-fill" id="ld-fill"></div>
+        <div class="ld-sweep"></div>
+      </div>
+    </div>
+
+    <div class="ld-ready-box hidden" id="ld-ready-box">
+      <button id="btn-enter-game" class="btn-rush-start">騎上機車，去臺中狂飆！</button>
+      <div class="ld-key-hints">
+        <span>🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 駕駛</span>
+        <span>🛵 <kbd>F</kbd> 切換機車/超跑</span>
+        <span>🗺️ <kbd>M</kbd> 全屏 GPS 大地圖</span>
+        <span>🥚 <kbd>E</kbd> 吃茶葉蛋補血</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       HUD 介面
+       ======================================================== -->
+  <div id="hud" class="hud-layer hidden">
+    <!-- 左上角 -->
+    <div class="top-left-hud">
+      <div class="vehicle-badge" id="hud-veh-badge">
+        <span class="veh-icon">🛵</span>
+        <span class="veh-name" id="hud-veh-name">勁戰 125 經典機車</span>
+        <span class="veh-switch-tip">[按 F 換超跑]</span>
+      </div>
+      <div class="bar-container">
+        <div class="bar-label">HP</div>
+        <div class="bar-bg"><div class="bar-fill health-bar" id="health-bar" style="width: 100%;"></div></div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-label">ARMOR</div>
+        <div class="bar-bg"><div class="bar-fill armor-bar" id="armor-bar" style="width: 100%;"></div></div>
+      </div>
+      <div class="bar-container">
+        <div class="bar-label">BOOST</div>
+        <div class="bar-bg"><div class="bar-fill nos-bar" id="nos-bar" style="width: 100%;"></div></div>
+      </div>
+    </div>
+
+    <!-- 右上角 -->
+    <div class="top-right-hud">
+      <div class="wanted-level" id="wanted-stars">
+        <span class="star">★</span>
+        <span class="star">★</span>
+        <span class="star">★</span>
+        <span class="star">★</span>
+        <span class="star">★</span>
+      </div>
+      <div class="cash-display" id="cash-val">$88,888</div>
+      <div class="hud-meta-row">
+        <div class="clock-display" id="hud-clock">21:30</div>
+        <div class="item-badge" id="btn-eat-egg" title="按 E 吃茶葉蛋補滿血量">
+          <span class="item-icon">🥚</span>
+          <span class="item-label">茶葉蛋 <kbd>E</kbd></span>
+          <span class="item-count">3 顆</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 頂部中央 -->
+    <div class="center-banner" id="center-banner">
+      <div class="banner-title" id="location-name">台中市 中區・台灣大道一段</div>
+      <div class="gps-target-hint hidden" id="gps-target-hint">
+        <span class="gps-icon">🚩 導航：</span>
+        <span id="gps-target-name">台中火車站</span>
+        <span class="gps-dist" id="gps-dist-val">(120 公尺)</span>
+      </div>
+    </div>
+
+    <!-- 左下角雷達小地圖 -->
+    <div class="minimap-wrapper" id="minimap-widget" title="點擊或按 M 打開大地圖">
+      <div class="minimap-border">
+        <canvas id="minimap-canvas" width="190" height="190"></canvas>
+        <div class="player-blip" id="player-blip"></div>
+        <div class="gps-pin-blip hidden" id="minimap-gps-pin"></div>
+      </div>
+      <div class="street-name-tag">
+        <span id="street-tag">台灣大道一段</span>
+        <span class="map-hint">[M] 大地圖</span>
+      </div>
+    </div>
+
+    <!-- 右下角時速表 -->
+    <div class="speedo-wrapper">
+      <div class="speedo-inner">
+        <div class="speed-num" id="speed-val">0</div>
+        <div class="speed-unit">KM/H</div>
+        <div class="gear-tag" id="gear-val">1</div>
+      </div>
+    </div>
+
+    <!-- 提示框 -->
+    <div class="toast-notice" id="toast-notice"></div>
+
+    <!-- 底部超現代極簡 GTA 快捷操作懸浮膠囊 -->
+    <div class="hud-controls-helper">
+      <span class="helper-hint">🖱️ 拖曳視角</span>
+      <span class="helper-divider"></span>
+      <button class="helper-btn btn-act-mission" id="btn-mission"><kbd>Q</kbd> 任務</button>
+      <button class="helper-btn btn-act-shoot" id="btn-shoot"><kbd>J</kbd> 鳴槍</button>
+      <button class="helper-btn btn-act-horn" id="btn-horn"><kbd>H</kbd> 喇叭</button>
+      <button class="helper-btn btn-act-radio" id="btn-radio"><kbd>N</kbd> 電台</button>
+      <button class="helper-btn btn-act-landmark" id="btn-landmark"><kbd>T</kbd> 傳送</button>
+      <button class="helper-btn btn-act-map" id="btn-open-map"><kbd>M</kbd> 地圖</button>
+      <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> 載具</button>
+      <button class="helper-btn btn-act-eat" id="btn-eat"><kbd>E</kbd> 補血</button>
+      <button class="helper-btn btn-act-reset" id="btn-reset"><kbd>R</kbd> 翻正</button>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       全台中 Google Maps 風格 電子導航系統 (嚴格依據真實 OSM 圖資)
+       ======================================================== -->
+  <div id="full-map-modal" class="map-modal google-maps-theme hidden">
+    <!-- Google Maps 頂部懸浮搜尋卡片 -->
+    <div class="gmaps-top-bar">
+      <div class="gmaps-search-card">
+        <span class="gmaps-logo-icon">🗺️</span>
+        <input type="text" id="gmaps-search-input" placeholder="搜尋台中市區街道、地標 (台中車站、李方艾美、台灣大道...)" value="台中市 (真實 OSM 圖資路網)">
+        <button class="gmaps-search-btn" id="gmaps-search-btn" title="搜尋">🔍</button>
+        <span class="gmaps-divider"></span>
+        <button class="gmaps-directions-btn" id="gmaps-route-btn" title="路線導航">🧭 導航</button>
+      </div>
+
+      <!-- Google Maps 快捷分類標籤 -->
+      <div class="gmaps-chips-bar">
+        <button class="gmaps-chip active" data-filter="all">🏙️ 全台中市區</button>
+        <button class="gmaps-chip mrt-chip" data-filter="mrt">🚇 台中捷運綠線</button>
+        <button class="gmaps-chip tra-chip" data-filter="tra">🚂 台鐵高架車站</button>
+        <button class="gmaps-chip food-chip" data-filter="food">🍜 逢甲/一中/夜市</button>
+        <button class="gmaps-chip spot-chip" data-filter="spot">🏛️ 歌劇院/景點</button>
+        <button class="gmaps-chip mall-chip" data-filter="mall">🛍️ 七期新光三越</button>
+      </div>
+
+      <button class="gmaps-close-btn" id="btn-close-map">✕ 返回駕駛</button>
+    </div>
+
+    <!-- 地圖主畫布與浮動卡片 -->
+    <div class="gmaps-viewport">
+      <canvas id="big-map-canvas"></canvas>
+
+      <!-- Google Maps 右下角懸浮按鈕 -->
+      <div class="gmaps-floating-tools">
+        <button class="gmaps-tool-btn" id="map-zoom-in" title="放大">➕</button>
+        <button class="gmaps-tool-btn" id="map-zoom-out" title="縮小">➖</button>
+        <button class="gmaps-tool-btn" id="map-center-player" title="定位到玩家">⌖</button>
+        <button class="gmaps-tool-btn" id="map-reset-view" title="重置全區視角">台中</button>
+      </div>
+
+      <!-- Google Maps 左下角比例尺與圖資標註 -->
+      <div class="gmaps-scale-bar">
+        <span id="gmaps-status-text">台中市全區 Google Maps 視圖 · 捷運綠線營運中</span>
+        <span class="gmaps-legal">圖資 © 2026 台中市政府 / OpenStreetMap / 臺中狂飆</span>
+      </div>
+
+      <!-- Google Maps 景點/捷運站詳情彈出卡片 -->
+      <div class="gmaps-place-card hidden" id="gmaps-place-card">
+        <div class="place-header">
+          <span class="place-type-badge" id="place-badge">捷運車站</span>
+          <button class="place-close-btn" id="btn-close-place-card">×</button>
+        </div>
+        <h3 id="place-title">台中捷運 市政府站 (G08)</h3>
+        <div class="place-rating">
+          <span class="stars">★★★★★</span>
+          <span class="rating-num">4.8</span>
+          <span class="reviews">(七期核心樞紐 · 台灣大道口)</span>
+        </div>
+        <p class="place-address" id="place-address">台中市西屯區台灣大道三段99號</p>
+        <div class="place-actions">
+          <button class="place-nav-btn" id="place-nav-btn">🚩 設定 GPS 導航路線</button>
+          <button class="place-nav-btn" id="place-teleport-btn" style="background:#00b894; margin-left:8px;">🚀 傳送至道路</button>
+          <button class="place-clear-btn" id="btn-clear-gps">清除導航</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three/three.module.js",
+      "three/addons/": "./libs/three/addons/",
+      "cannon-es": "./libs/cannon-es.js"
+    }
+  }
+  </script>
+  <script type="module" src="game.js"></script>
+</body>
+</html>

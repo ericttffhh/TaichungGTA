@@ -1,0 +1,1080 @@
+/* =========================================================
+   臺中狂飆 (TAICHUNG RUSH) - 樣式表
+   風格：Taipei-Rush 經典深邃美學 + 現代 GPS 導航向量地圖
+========================================================= */
+
+:root {
+  --rush-red: #d81f2a;
+  --rush-red-glow: rgba(216, 31, 42, 0.6);
+  --rush-dark: #07080c;
+  --rush-cyan: #00f2fe;
+  --rush-gold: #f5b041;
+  --rush-green: #2ecc71;
+  --font-tc: 'Noto Sans TC', 'PingFang TC', -apple-system, sans-serif;
+  --font-mono: 'Orbitron', 'Bebas Neue', monospace;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--rush-dark);
+  font-family: var(--font-tc);
+  color: #fff;
+}
+
+#game-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: grab;
+}
+
+#game-container:active {
+  cursor: grabbing;
+}
+
+/* =========================================================
+   載入畫面 (Loader)
+========================================================= */
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: #07080c radial-gradient(circle at 66% 40%, rgba(216, 31, 42, 0.18) 0%, rgba(7, 8, 12, 0.98) 75%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(24px, 4vw, 60px);
+  transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+}
+
+#loader.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ld-grade {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(5,5,9,0) 60%, rgba(5,5,9,0.7) 85%, rgba(5,5,9,0.96) 100%);
+}
+
+.ld-logo {
+  position: relative;
+  z-index: 2;
+  width: clamp(260px, 32vw, 520px);
+  filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.9));
+}
+
+.ld-logo svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.ld-tip {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(35px, 5vw, 75px);
+  transform: translateX(-50%);
+  width: min(44vw, 680px);
+  z-index: 2;
+}
+
+.ld-tip-k {
+  font-size: clamp(11px, 0.75vw, 13px);
+  font-weight: 800;
+  color: #ff6a6f;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ld-tip-k::before {
+  content: "";
+  width: 20px;
+  height: 2.5px;
+  background: var(--rush-red);
+}
+
+.ld-tips {
+  margin-top: 8px;
+  font-size: clamp(14px, 0.95vw, 18px);
+  line-height: 1.6;
+  color: #f4f1ea;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.ld-prog {
+  position: absolute;
+  right: clamp(24px, 4vw, 60px);
+  bottom: clamp(35px, 5vw, 75px);
+  width: clamp(240px, 24vw, 420px);
+  z-index: 2;
+}
+
+.ld-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ld-spin {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spinAnim 0.8s linear infinite;
+}
+
+@keyframes spinAnim {
+  to { transform: rotate(360deg); }
+}
+
+.ld-stage b {
+  font-size: clamp(14px, 0.9vw, 18px);
+  font-weight: 700;
+  display: block;
+  letter-spacing: 0.05em;
+  color: #fff;
+}
+
+.ld-stage small {
+  font-size: clamp(10px, 0.6vw, 12px);
+  color: #a0a6b5;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-family: var(--font-mono);
+  display: block;
+  margin-top: 2px;
+}
+
+.ld-pct {
+  font-family: var(--font-mono);
+  font-size: clamp(28px, 2.2vw, 40px);
+  font-weight: 700;
+  color: #fff;
+}
+
+.ld-pct i {
+  font-size: 0.55em;
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.6);
+  margin-left: 2px;
+}
+
+.ld-track {
+  height: 3.5px;
+  background: rgba(255, 255, 255, 0.15);
+  margin-top: 14px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.ld-fill {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  transform-origin: 0;
+  transform: scaleX(0);
+  transition: transform 0.4s ease;
+}
+
+.ld-fill::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  right: 0;
+  width: 32px;
+  background: linear-gradient(90deg, transparent, var(--rush-red));
+}
+
+.ld-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+  animation: sweepAnim 1.6s ease-in-out infinite;
+}
+
+@keyframes sweepAnim {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(380%); }
+}
+
+.ld-ready-box {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  text-align: center;
+  background: rgba(8, 10, 16, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-top: 4px solid var(--rush-red);
+  padding: 35px 50px;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.9), 0 0 50px rgba(216, 31, 42, 0.35);
+  backdrop-filter: blur(14px);
+}
+
+.btn-rush-start {
+  background: linear-gradient(135deg, var(--rush-red), #b9151e);
+  color: #fff;
+  font-family: var(--font-tc);
+  font-size: 1.4rem;
+  font-weight: 900;
+  padding: 16px 48px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  letter-spacing: 3px;
+  box-shadow: 0 10px 30px var(--rush-red-glow);
+  transition: all 0.25s ease;
+}
+
+.btn-rush-start:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 15px 40px rgba(216, 31, 42, 0.85);
+}
+
+.ld-key-hints {
+  margin-top: 22px;
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #cbd5e1;
+}
+
+kbd {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  margin: 0 2px;
+}
+
+/* =========================================================
+   HUD 層
+========================================================= */
+.hud-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: opacity 0.4s ease;
+}
+
+.hud-layer.hidden {
+  opacity: 0;
+}
+
+.top-left-hud {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  z-index: 110;
+}
+
+.vehicle-badge {
+  background: rgba(12, 17, 29, 0.82);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+}
+
+.veh-name { color: var(--rush-cyan); letter-spacing: 0.5px; }
+.veh-switch-tip { margin-left: auto; font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
+
+.bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 26, 0.65);
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+}
+
+.bar-label {
+  width: 44px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #cbd5e1;
+  letter-spacing: 0.8px;
+}
+
+.bar-bg {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.bar-fill {
+  height: 100%;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.health-bar {
+  background: linear-gradient(90deg, #ff4757, #2ed573);
+  box-shadow: 0 0 10px rgba(46, 213, 115, 0.6);
+}
+
+.armor-bar {
+  background: linear-gradient(90deg, #1e90ff, #70a1ff);
+  box-shadow: 0 0 10px rgba(112, 161, 255, 0.6);
+}
+
+.nos-bar {
+  background: linear-gradient(90deg, #9b59b6, var(--rush-cyan));
+  box-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+}
+
+.top-right-hud {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  z-index: 110;
+}
+
+.wanted-level {
+  display: flex;
+  gap: 5px;
+  background: rgba(10, 15, 26, 0.75);
+  padding: 4px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.wanted-level .star {
+  font-size: 1.45rem;
+  color: rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.wanted-level .star.active {
+  color: #ff3838;
+  text-shadow: 0 0 16px #ff3838, 0 0 25px rgba(255, 56, 56, 0.8);
+  animation: starPulse 1.2s infinite alternate;
+}
+
+@keyframes starPulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.15); filter: brightness(1.3); }
+}
+
+.cash-display {
+  font-family: var(--font-mono);
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: #2ed573;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(46, 213, 115, 0.5), 2px 2px 0 #000;
+  line-height: 1;
+}
+
+.hud-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clock-display {
+  background: rgba(10, 15, 26, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 5px 12px;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: #f1f2f6;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.item-badge {
+  background: rgba(10, 15, 26, 0.82);
+  border: 1px solid rgba(255, 211, 42, 0.35);
+  padding: 5px 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #ffd32a;
+  pointer-events: auto;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.item-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(255, 211, 42, 0.35);
+  border-color: rgba(255, 211, 42, 0.7);
+}
+
+.center-banner {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 110;
+}
+
+.banner-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1.2px;
+  background: rgba(10, 15, 26, 0.85);
+  padding: 6px 22px;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 242, 254, 0.18);
+  backdrop-filter: blur(10px);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gps-target-hint {
+  background: linear-gradient(135deg, rgba(235, 47, 6, 0.9), rgba(184, 23, 2, 0.9));
+  border: 1px solid rgba(255, 77, 79, 0.55);
+  box-shadow: 0 4px 16px rgba(235, 47, 6, 0.45);
+  padding: 4px 16px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gps-dist { margin-left: 4px; color: #ffd32a; font-weight: 800; }
+
+.minimap-wrapper {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 110;
+}
+
+.minimap-border {
+  position: relative;
+  width: 176px;
+  height: 176px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2.5px solid #00f2fe;
+  box-shadow: 0 0 20px rgba(0, 242, 254, 0.35), inset 0 0 15px rgba(0, 0, 0, 0.85);
+  background: #080c14;
+}
+
+#minimap-canvas { width: 100%; height: 100%; }
+
+.player-blip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid var(--rush-red);
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 6px var(--rush-red));
+}
+
+.gps-pin-blip {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #ffd32a;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px #ffd32a;
+}
+
+.street-name-tag {
+  background: rgba(10, 15, 26, 0.85);
+  border: 1px solid rgba(0, 242, 254, 0.25);
+  padding: 4px 14px;
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(8px);
+}
+
+.map-hint { color: var(--rush-cyan); font-size: 0.72rem; }
+
+.speedo-wrapper {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: 145px;
+  height: 145px;
+  border-radius: 50%;
+  background: radial-gradient(circle at center, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.98) 100%);
+  border: 2.5px solid var(--rush-red);
+  box-shadow: 0 0 25px rgba(216, 31, 42, 0.45), inset 0 0 20px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 110;
+}
+
+.speedo-inner { text-align: center; }
+.speed-num { font-family: var(--font-mono); font-size: 2.8rem; font-weight: 900; color: #fff; line-height: 1; }
+.speed-unit { font-family: var(--font-mono); font-size: 0.68rem; color: #94a3b8; letter-spacing: 2px; }
+.gear-tag { font-family: var(--font-mono); font-size: 0.85rem; color: var(--rush-gold); font-weight: 900; margin-top: 2px; }
+
+.toast-notice {
+  position: absolute;
+  top: 85px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  color: #fff;
+  border: 1px solid rgba(0, 242, 254, 0.4);
+  padding: 8px 22px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(0, 242, 254, 0.2);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none;
+  z-index: 150;
+}
+
+.toast-notice.show { opacity: 1; transform: translateX(-50%) translateY(6px); }
+
+/* 底部極簡 GTA 快捷懸浮操作列 (不遮擋車輛與馬路視角) */
+.hud-controls-helper {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(10, 15, 26, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 30px;
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+  z-index: 110;
+  max-width: 92vw;
+  flex-wrap: nowrap;
+}
+
+.helper-hint {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-weight: 700;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
+.helper-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+}
+
+.helper-btn {
+  background: transparent;
+  color: #e2e8f0;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 18px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.helper-btn kbd {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.helper-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-act-mission { color: #f1c40f; }
+.btn-act-shoot { color: #ff4757; }
+.btn-act-horn { color: #2ed573; }
+.btn-act-radio { color: #a29bfe; }
+.btn-act-landmark { color: #00f2fe; }
+.btn-act-map { color: #70a1ff; }
+.btn-act-veh { color: #ffa502; }
+.btn-act-eat { color: #eccc68; }
+.btn-act-reset { color: #ced6e0; }
+
+/* =========================================================
+   全台中 Google Maps 風格 電子地圖系統 (Google Maps Authentic Theme)
+========================================================= */
+.google-maps-theme {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: #e8eaed;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", Arial, sans-serif;
+}
+
+.google-maps-theme.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 頂部懸浮 Google Maps 搜尋欄與分類標籤 */
+.gmaps-top-bar {
+  position: absolute;
+  top: 16px;
+  left: 20px;
+  right: 20px;
+  z-index: 520;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.gmaps-search-card {
+  pointer-events: auto;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(60, 64, 67, 0.3), 0 1px 2px rgba(60, 64, 67, 0.15);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 48px;
+  width: clamp(340px, 32vw, 480px);
+  border: 1px solid #dadce0;
+}
+
+.gmaps-logo-icon {
+  font-size: 1.25rem;
+  margin-right: 8px;
+}
+
+#gmaps-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.95rem;
+  color: #202124;
+  font-family: inherit;
+  font-weight: 500;
+  background: transparent;
+}
+
+.gmaps-search-btn, .gmaps-directions-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #5f6368;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.gmaps-search-btn:hover, .gmaps-directions-btn:hover {
+  background: #f1f3f4;
+  color: #1a73e8;
+}
+
+.gmaps-divider {
+  width: 1px;
+  height: 24px;
+  background: #dadce0;
+  margin: 0 4px;
+}
+
+/* 快捷標籤列 */
+.gmaps-chips-bar {
+  pointer-events: auto;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.gmaps-chip {
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3c4043;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.2);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gmaps-chip:hover {
+  background: #f8f9fa;
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.gmaps-chip.active {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+
+.gmaps-chip.mrt-chip.active {
+  background: #e6f4ea;
+  border-color: #00a86b;
+  color: #00875a;
+}
+
+.gmaps-close-btn {
+  pointer-events: auto;
+  margin-left: auto;
+  background: #d93025;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(217, 48, 37, 0.4);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.gmaps-close-btn:hover {
+  background: #b31412;
+  transform: translateY(-1px);
+}
+
+/* 地圖視窗 */
+.gmaps-viewport {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#big-map-canvas {
+  width: 100%;
+  height: 100%;
+  background: #f1f3f4;
+  cursor: grab;
+}
+
+#big-map-canvas:active {
+  cursor: grabbing;
+}
+
+/* 右下角懸浮按鈕工具箱 */
+.gmaps-floating-tools {
+  position: absolute;
+  right: 20px;
+  bottom: 34px;
+  z-index: 520;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gmaps-tool-btn {
+  width: 40px;
+  height: 40px;
+  background: #ffffff;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(60, 64, 67, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.1rem;
+  color: #3c4043;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.gmaps-tool-btn:hover {
+  background: #f8f9fa;
+  color: #1a73e8;
+  border-color: #1a73e8;
+}
+
+/* 比例尺標籤 */
+.gmaps-scale-bar {
+  position: absolute;
+  left: 20px;
+  bottom: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #dadce0;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #5f6368;
+  display: flex;
+  gap: 16px;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.gmaps-legal {
+  color: #80868b;
+}
+
+/* Google Maps 景點/車站浮動詳情卡片 */
+.gmaps-place-card {
+  position: absolute;
+  left: 20px;
+  top: 85px;
+  width: 380px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(60, 64, 67, 0.3);
+  padding: 18px 20px;
+  z-index: 530;
+  border: 1px solid #dadce0;
+  animation: slideInPlace 0.25s ease;
+}
+
+@keyframes slideInPlace {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.place-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.place-type-badge {
+  background: #e6f4ea;
+  color: #137333;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.place-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #5f6368;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.place-close-btn:hover { color: #202124; }
+
+#place-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #202124;
+  margin: 0 0 6px 0;
+}
+
+.place-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+}
+
+.place-rating .stars { color: #f2994a; letter-spacing: 1px; }
+.place-rating .rating-num { font-weight: 700; color: #e37400; }
+.place-rating .reviews { color: #5f6368; font-size: 0.78rem; }
+
+.place-address {
+  font-size: 0.85rem;
+  color: #5f6368;
+  margin: 0 0 16px 0;
+  line-height: 1.4;
+}
+
+.place-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.place-nav-btn {
+  flex: 1;
+  background: #1a73e8;
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(26, 115, 232, 0.4);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.place-nav-btn:hover {
+  background: #1557b0;
+  transform: translateY(-1px);
+}
+
+.place-clear-btn {
+  background: #f1f3f4;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  padding: 10px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.place-clear-btn:hover { background: #e8eaed; }
+
+/* 台灣夜市與街頭路人對話氣泡 (Taipei-Rush 經典元素) */
+.speech-bubble-3d {
+  position: absolute;
+  background: #ffffff;
+  border: 2px solid #202124;
+  border-radius: 12px;
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #202124;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -100%);
+  z-index: 100;
+  transition: opacity 0.3s;
+}
+
+.speech-bubble-3d::after {
+  content: "";
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 7px 6px 0;
+  border-style: solid;
+  border-color: #202124 transparent;
+  display: block;
+  width: 0;
+}
+
+.hidden { display: none !important; }
+
+@media (max-width: 820px) {
+  .ld-tip { display: none; }
+  .gmaps-top-bar { flex-direction: column; align-items: stretch; }
+  .gmaps-search-card { width: 100%; }
+  .gmaps-place-card { width: calc(100% - 40px); left: 20px; }
+  .hud-controls-helper { transform: translateX(-50%) scale(0.85); bottom: 12px; }
+}

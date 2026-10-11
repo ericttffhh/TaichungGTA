@@ -1,0 +1,22 @@
+.DS_Store
+venv/
+*.pyc
+__pycache__/
+node_modules/
+
+# Temporary test screenshots
+verify_*.png
+camera_*.png
+final_*.png
+screenshot_*.png
+test_*.png
+daqing_*.png
+lifang_*.png
+station_*.png
+landmark_*.png
+current_view.png
+in_game_view.png
+
+# Keep key demonstration screenshots
+!in_game_street_view.png
+!verify_gta_features.png
