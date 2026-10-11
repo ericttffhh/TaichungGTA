@@ -2370,18 +2370,23 @@ class GoogleMapSystem {
 
   open() {
     this.isOpen = true;
+    if (document.pointerLockElement) {
+      document.exitPointerLock?.();
+    }
     if (this.modal) {
       this.modal.classList.remove('hidden');
     }
     soundManager.playMapToggle(true);
-    // 預設將地圖中心對齊玩家目前位置
-    if (this.app.vehicle?.body) {
-      this.panX = -this.app.vehicle.body.position.x;
-      this.panY = -this.app.vehicle.body.position.z;
+    // 預設將地圖中心對齊玩家目前位置 (載具或人物)
+    const activePos = this.app.playerMode === 'onfoot' ? this.app.character?.meshGroup.position : this.app.vehicle?.body?.position;
+    if (activePos) {
+      this.panX = -activePos.x;
+      this.panY = -activePos.z;
     }
     this.resize();
     this.render();
   }
+
 
   close() {
     this.isOpen = false;
@@ -3948,10 +3953,15 @@ export class TaichungRushApp {
         if (this.hudLayer) this.hudLayer.classList.remove('hidden');
         soundManager.init();
         soundManager.playVehicleSwitch();
+        if (!document.body.classList.contains('touch-device')) {
+          setTimeout(() => {
+            document.body.requestPointerLock?.().catch(() => {});
+          }, 150);
+        }
       });
     }
 
-    // 360 度滑鼠視角自由環繞控制 (Mouse Orbit Controls)
+    // 360 度滑鼠視角自由環繞控制 (Mouse Orbit Controls & Pointer Lock)
     this.orbitYaw = 0;
     this.orbitPitch = 0.32;
     this.orbitDist = 5.8;
@@ -3959,30 +3969,68 @@ export class TaichungRushApp {
     this.mouseDragStartX = 0;
     this.mouseDragStartY = 0;
     this.lastOrbitInteractionTime = 0;
+    this.isPointerLocked = false;
+
+    const mouseHint = document.getElementById('hud-mouse-hint');
+
+    document.addEventListener('pointerlockchange', () => {
+      this.isPointerLocked = (document.pointerLockElement === document.body || document.pointerLockElement === this.renderer?.domElement);
+      if (this.isPointerLocked) {
+        document.body.classList.add('pointer-locked');
+        if (mouseHint) mouseHint.textContent = '🎯 滑鼠已鎖定 (ESC 解鎖)';
+      } else {
+        document.body.classList.remove('pointer-locked');
+        if (mouseHint) mouseHint.textContent = '🎯 點擊鎖定滑鼠 (ESC解鎖)';
+      }
+    });
+
+    // 點擊畫面非按鈕區域自動請求鎖定滑鼠
+    window.addEventListener('click', (e) => {
+      if (document.body.classList.contains('touch-device')) return;
+      if (this.loader && !this.loader.classList.contains('hidden')) return;
+      if (this.mapSystem && this.mapSystem.isOpen) return;
+      if (e.target.closest('#hud, #full-map-modal, #settings-modal, #radio-modal, button, input, .minimap-wrapper, .game-modal-overlay')) {
+        return;
+      }
+      if (!this.isPointerLocked) {
+        document.body.requestPointerLock?.().catch(() => {});
+      }
+    });
 
     window.addEventListener('mousedown', (e) => {
-      // 點擊 UI 按鈕或大地圖時不旋轉鏡頭
-      if (e.target.closest('#hud, #full-map-modal, button, input, .minimap-wrapper')) return;
+      if (e.target.closest('#hud, #full-map-modal, #settings-modal, #radio-modal, button, input, .minimap-wrapper, .game-modal-overlay')) return;
       this.isMouseDragging = true;
       this.mouseDragStartX = e.clientX;
       this.mouseDragStartY = e.clientY;
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (!this.isMouseDragging) return;
-      const dx = e.clientX - this.mouseDragStartX;
-      const dy = e.clientY - this.mouseDragStartY;
-      this.mouseDragStartX = e.clientX;
-      this.mouseDragStartY = e.clientY;
+      let dx = 0;
+      let dy = 0;
 
-      this.orbitYaw -= dx * 0.0055;
-      this.orbitPitch = Math.max(-0.06, Math.min(1.22, this.orbitPitch + dy * 0.0045));
+      if (this.isPointerLocked) {
+        // 滑鼠鎖定模式：以極致流暢平滑度旋轉鏡頭 (FPS / TPS 模式)
+        dx = e.movementX || 0;
+        dy = e.movementY || 0;
+      } else if (this.isMouseDragging) {
+        // 未鎖定時的拖曳旋轉
+        dx = e.clientX - this.mouseDragStartX;
+        dy = e.clientY - this.mouseDragStartY;
+        this.mouseDragStartX = e.clientX;
+        this.mouseDragStartY = e.clientY;
+      } else {
+        return;
+      }
+
+      this.orbitYaw -= dx * 0.0032;
+      this.orbitPitch = Math.max(-0.06, Math.min(1.22, this.orbitPitch + dy * 0.0028));
       this.lastOrbitInteractionTime = performance.now();
     });
 
     window.addEventListener('mouseup', () => {
       this.isMouseDragging = false;
     });
+
 
     window.addEventListener(
       'wheel',
@@ -4353,6 +4401,7 @@ export class TaichungRushApp {
     if (!modal) return;
     const isHidden = modal.classList.contains('hidden');
     if (isHidden) {
+      if (document.pointerLockElement) document.exitPointerLock?.();
       modal.classList.remove('hidden');
     } else {
       modal.classList.add('hidden');
@@ -4363,10 +4412,12 @@ export class TaichungRushApp {
   openRadioModal() {
     const modal = document.getElementById('radio-modal');
     if (!modal) return;
+    if (document.pointerLockElement) document.exitPointerLock?.();
     soundManager.init();
     modal.classList.remove('hidden');
     this.updateRadioModalUI();
   }
+
 
   closeRadioModal() {
     const modal = document.getElementById('radio-modal');

@@ -213,10 +213,14 @@
     <!-- 提示框 -->
     <div class="toast-notice" id="toast-notice"></div>
 
+    <!-- 準心中心點 (滑鼠鎖定時顯示) -->
+    <div id="hud-crosshair"></div>
+
     <!-- 底部超現代極簡 GTA 快捷操作懸浮膠囊 -->
     <div class="hud-controls-helper">
-      <span class="helper-hint">🖱️ 拖曳視角</span>
+      <span class="helper-hint" id="hud-mouse-hint">🎯 點擊鎖定滑鼠 (ESC解鎖)</span>
       <span class="helper-divider"></span>
+
       <button class="helper-btn btn-act-mission" id="btn-mission"><kbd>Q</kbd> 任務</button>
       <button class="helper-btn btn-act-shoot" id="btn-shoot"><kbd>J</kbd> 鳴槍</button>
       <button class="helper-btn btn-act-horn" id="btn-horn"><kbd>H</kbd> 喇叭</button>

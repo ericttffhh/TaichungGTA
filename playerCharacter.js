@@ -327,56 +327,57 @@ export class PlayerCharacter {
 
     if (!this.meshGroup.visible) return;
 
-    // 1. 根據相機角度計算世界移動向量 (Camera-Relative Movement)
-    let moveX = 0;
-    let moveZ = 0;
+    // 1. 根據相機角度精準計算世界移動向量 (Camera-Relative Movement)
+    let inputFwd = 0;
+    let inputRight = 0;
 
-    if (inputs.forward) moveZ += 1;
-    if (inputs.backward) moveZ -= 1;
-    if (inputs.left) moveX -= 1;
-    if (inputs.right) moveX += 1;
+    if (inputs.forward) inputFwd += 1;
+    if (inputs.backward) inputFwd -= 1;
+    if (inputs.right) inputRight += 1;
+    if (inputs.left) inputRight -= 1;
 
-    const isMoving = Math.hypot(moveX, moveZ) > 0.1;
+    const isMoving = Math.hypot(inputFwd, inputRight) > 0.05;
     this.isSprint = !!inputs.boost && isMoving;
 
-    // 相機偏角
-    let camHeading = 0;
-    if (this.app?.camera) {
-      const c = this.app.camera;
-      camHeading = Math.atan2(
-        this.meshGroup.position.x - c.position.x,
-        this.meshGroup.position.z - c.position.z
-      );
-    }
+    const camera = this.app?.camera;
+    if (isMoving && camera) {
+      // 取得相機水平投影前進向量
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      forward.normalize();
 
-    if (isMoving) {
-      // 歸一化
-      const moveLen = Math.hypot(moveX, moveZ);
-      const normX = moveX / moveLen;
-      const normZ = moveZ / moveLen;
+      // 相機視野向右向量 (Up × forward)
+      const right = new THREE.Vector3();
+      right.crossVectors(new THREE.Vector3(0, 1, 0), forward).normalize();
 
-      // 計算相對相機的位移角
-      const inputAngle = Math.atan2(normX, normZ);
-      const targetHeading = camHeading + inputAngle;
 
-      // 平滑轉向
+      // 合成相機相對的世界移動向量
+      const moveDir = new THREE.Vector3();
+      moveDir.addScaledVector(forward, inputFwd);
+      moveDir.addScaledVector(right, inputRight);
+      moveDir.normalize();
+
+      // 計算目標面朝角度
+      const targetHeading = Math.atan2(moveDir.x, moveDir.z);
+
+      // 平滑旋轉朝向
       let angleDiff = targetHeading - this.yaw;
       while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      this.yaw += angleDiff * Math.min(1, dt * 14);
+      this.yaw += angleDiff * Math.min(1, dt * 16);
+      this.meshGroup.rotation.y = this.yaw;
 
-      // 移動速度 (徒步 4.2 m/s ~ 15km/h，衝刺 8.5 m/s ~ 30km/h)
+      // 移動位置 (徒步 4.2 m/s ~ 15km/h，衝刺 8.5 m/s ~ 30km/h)
       const moveSpeed = this.isSprint ? 8.5 : 4.2;
-      const vx = Math.sin(this.yaw) * moveSpeed;
-      const vz = Math.cos(this.yaw) * moveSpeed;
-
-      this.meshGroup.position.x += vx * dt;
-      this.meshGroup.position.z += vz * dt;
+      this.meshGroup.position.x += moveDir.x * moveSpeed * dt;
+      this.meshGroup.position.z += moveDir.z * moveSpeed * dt;
 
       this.speed = Math.round(moveSpeed * 3.6); // 轉為 KM/H
     } else {
       this.speed = 0;
     }
+
 
     this.meshGroup.rotation.y = this.yaw;
 

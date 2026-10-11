@@ -938,8 +938,29 @@ kbd {
   flex-wrap: nowrap;
 }
 
+/* 螢幕中心微型準星標點 (滑鼠鎖定時啟動) */
+#hud-crosshair {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 6px #00cec9, 0 0 10px rgba(0, 206, 201, 0.6);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
+}
+body.pointer-locked #hud-crosshair {
+  opacity: 1;
+}
+
 .helper-hint {
   font-size: 0.72rem;
+
   color: #94a3b8;
   font-weight: 700;
   padding: 0 6px;
