@@ -13,6 +13,7 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 import { geoToMeters, LANDMARK_CONFIGS, GeometryBuilder } from './game.js';
 import { TaiwanTextureFactory, TAIWAN_BUILDING_STYLES } from './textures.js';
 import { createLayeredBuildingGeometry, getFacadeMaterialSets } from './facadeTextures.js';
+import { TaiwanStreetscapeTextures, TaiwanArcadeBuilder } from './taiwanStreetscape.js';
 
 export const CHUNK_SIZE = 200; // 每格寬高 200 公尺
 
@@ -293,17 +294,55 @@ export class WorldChunkManager {
       side: THREE.DoubleSide
     });
 
-    // 16 款台灣在地真實商圈與住宅外牆材質 (7-11, 全家, 50嵐, 太陽堂, 排骨飯, 鐵窗花老公寓...)
+    // 16 款台灣在地真實商圈與住宅外牆材質
     this.facadeMats = TaiwanTextureFactory.createAllTaiwanFacadeMaterials();
 
-    // 材質陣列：Index 0 為屋頂，Index 1~16 為 16 種台灣在地特色外牆 (每棟隨機指派，鄰近絕不重複)
-    // 新版分層立面：店面材質 (1 樓) + 上層樓層材質 (2 樓以上)，並啟用頂點色做每棟建築的色彩變化
-    const facadeSets = getFacadeMaterialSets();
-    this.roofMat.vertexColors = true;
-    this.facadeMats.forEach((m) => { m.vertexColors = true; m.needsUpdate = true; });
-    this.shopBase = 1 + this.facadeMats.length;
-    this.upperBase = this.shopBase + facadeSets.shops.length;
-    this.buildingMaterialArray = [this.roofMat, ...this.facadeMats, ...facadeSets.shops, ...facadeSets.uppers];
+    // 臺灣街景專屬細部材質：
+    // Index 1: 騎樓磨石子/紅磚地坪
+    this.arcadeFloorMat = new THREE.MeshStandardMaterial({
+      map: TaiwanStreetscapeTextures.createArcadeFloorTexture(),
+      roughness: 0.7,
+      metalness: 0.1
+    });
+
+    // Index 2: 騎樓正面承重立柱
+    this.arcadePillarMat = new THREE.MeshStandardMaterial({
+      color: 0xa4b0be,
+      roughness: 0.85,
+      metalness: 0.15
+    });
+
+    // Index 3: 頂樓白鐵不鏽鋼水塔
+    this.tankMat = new THREE.MeshStandardMaterial({
+      color: 0xdcdde1,
+      roughness: 0.22,
+      metalness: 0.88
+    });
+
+    // Index 4 ~ 13: 10 款真實臺灣騎樓店面 (7-11, 全家, 50嵐, 美而美, 排骨飯, 機車行, 藥局, 彩券, 五金, 鐵捲門)
+    this.storefrontMats = TaiwanStreetscapeTextures.createStorefrontTextures().map(t => new THREE.MeshStandardMaterial({
+      map: t,
+      roughness: 0.45,
+      metalness: 0.1
+    }));
+
+    // Index 14 ~ 18: 5 款真實臺灣住宅/商辦上層立面 (二丁掛磁磚、洗石子、馬賽克、玻璃窗帶)
+    this.upperMats = TaiwanStreetscapeTextures.createUpperFacadeTextures().map(t => new THREE.MeshStandardMaterial({
+      map: t,
+      roughness: 0.75,
+      metalness: 0.1
+    }));
+
+    // 整合完整多重材質陣列 (按固定索引對應)
+    this.buildingMaterialArray = [
+      this.roofMat,          // 0: 屋頂水泥
+      this.arcadeFloorMat,   // 1: 騎樓地坪
+      this.arcadePillarMat,  // 2: 騎樓立柱
+      this.tankMat,          // 3: 白鐵水塔
+      ...this.storefrontMats,// 4 ~ 13: 10 款店面
+      ...this.upperMats,     // 14 ~ 18: 5 款上層
+      ...this.facadeMats     // 19 ~ 34: 經典風格
+    ];
 
     // 水面材質 (深藍微透明、下陷 0.5 米、帶光澤微波)
     this.waterMaterial = new THREE.MeshStandardMaterial({
@@ -803,8 +842,9 @@ export class WorldChunkManager {
         geom.translate(b.cx, 0, b.cz);
         geom.computeVertexNormals();
 
-        // 材質分組：Material 0 為屋頂水泥防水層；Material 1~16 為台灣公寓/商辦在地特色風格
-        const styleIdx = b.styleIdx || (1 + TaiwanTextureFactory.getBuildingStyleIndex(b.cx, b.cz));
+        // 材質分組：Material 0 為屋頂；Material 14~18 為 5 款真實臺灣住宅/商辦高解析立面 (二丁掛磁磚、洗石子、馬賽克、玻璃窗帶)
+        const styleIdx = Math.abs(Math.floor(b.cx * 0.17 + b.cz * 0.31));
+        const sideMatIdx = 14 + (styleIdx % 5);
         const pos = geom.attributes.position;
         const norm = geom.attributes.normal;
         const uv = geom.attributes.uv;
@@ -817,7 +857,7 @@ export class WorldChunkManager {
         for (let v = 0; v < totalVerts; v += 3) {
           const ny = (norm.getY(v) + norm.getY(v + 1) + norm.getY(v + 2)) / 3;
           const isRoofCap = Math.abs(ny) > 0.65;
-          const assignedMat = isRoofCap ? 0 : styleIdx;
+          const assignedMat = isRoofCap ? 0 : sideMatIdx;
 
           if (assignedMat !== currentGroupMat) {
             if (currentGroupMat !== null) {
@@ -831,7 +871,7 @@ export class WorldChunkManager {
           geom.addGroup(groupStart, totalVerts - groupStart, currentGroupMat);
         }
 
-        // 側邊 UV 座標校正：使用立面切線方向之世界公尺距離 (每 10 米重複一次)，徹底消除橫向拉伸
+        // 側邊 UV 座標校正：每 10 米橫向重複一次，垂直方向每 13.2 米 (4層樓) 一次
         for (let v = 0; v < totalVerts; v++) {
           const ny = norm.getY(v);
           const x = pos.getX(v);
@@ -839,16 +879,13 @@ export class WorldChunkManager {
           const z = pos.getZ(v);
 
           if (Math.abs(ny) > 0.65) {
-            // 屋頂水平 UV
             uv.setXY(v, x / 16.0, z / 16.0);
           } else {
-            // 垂直外牆 UV：歐幾里得切向公尺距離，每 10 米重複一次，杜絕任何角度拉伸
             const nx = norm.getX(v);
             const nz = norm.getZ(v);
             const tangentMeters = -x * nz + z * nx;
-            const u = tangentMeters / 10.0;
-            // 垂直方向每 12 米 (約 3~4 層樓高) 重複一次，1F (0~4m) 完美呈現騎樓店面
-            const vCoord = y / 12.0;
+            const u = tangentMeters / 10.5;
+            const vCoord = y / 13.2;
             uv.setXY(v, u, vCoord);
           }
         }
@@ -857,12 +894,14 @@ export class WorldChunkManager {
       }
     }
 
-    // ★ 街道連棟街屋自動補強 (解決「台中正常街景房子沒有這麼散」問題)
-    // 遍歷此 Chunk 內之路段，在沿街空隙 (距離現有建築 > 16m) 自動建立經典台灣連棟透天/騎樓商辦
+    // ★ 街道連棟臺灣騎樓街屋全面密集補強 (徹底消除街景稀疏與空洞問題)
+    // 遍歷此 Chunk 內之路段，沿路網以 8.0m 標準面寬連續排布真實 3D 臺灣騎樓 (含內退騎樓步道與柱列)
     if (this.roadGrid) {
       const segs = this.roadGrid.get(chunkKey);
       if (segs && segs.length > 0) {
         const existingBuildings = bucket.buildings || [];
+        const placedInfill = [];
+
         for (let s = 0; s < segs.length; s++) {
           const seg = segs[s];
           if (!seg.points || seg.points.length < 2) continue;
@@ -873,54 +912,88 @@ export class WorldChunkManager {
             const p1 = pts[p], p2 = pts[p + 1];
             const dx = p2.x - p1.x, dz = p2.z - p1.z;
             const len = Math.hypot(dx, dz);
-            if (len < 22.0) continue;
+            if (len < 6.5) continue;
 
             const nx = -dz / len;
             const nz = dx / len;
             const angle = Math.atan2(dx, dz);
 
-            // 檢查道路兩側 (人行道退縮線後方 8.0 米)
-            const sides = [
-              { sign: 1, faceAngle: angle - Math.PI / 2 },
-              { sign: -1, faceAngle: angle + Math.PI / 2 }
-            ];
+            const bayW = 8.0; // 標準臺灣街屋面寬約 8 米
+            const numBays = Math.max(1, Math.floor((len - 2.0) / bayW));
 
-            for (let sd = 0; sd < sides.length; sd++) {
-              const { sign, faceAngle } = sides[sd];
-              const bx = (p1.x + p2.x) * 0.5 + nx * (hw + 8.5) * sign;
-              const bz = (p1.z + p2.z) * 0.5 + nz * (hw + 8.5) * sign;
+            for (let b = 0; b < numBays; b++) {
+              const t = (b + 0.5) / numBays;
+              const px = p1.x + t * dx;
+              const pz = p1.z + t * dz;
 
-              // 檢查周遭 16 米內是否已有建築
-              let hasNearBuilding = false;
-              for (let eb = 0; eb < existingBuildings.length; eb++) {
-                const b = existingBuildings[eb];
-                const dSq = (b.cx - bx) ** 2 + (b.cz - bz) ** 2;
-                if (dSq < 16.0 * 16.0) {
-                  hasNearBuilding = true;
-                  break;
+              const sides = [
+                { sign: 1, faceAngle: angle - Math.PI / 2 },
+                { sign: -1, faceAngle: angle + Math.PI / 2 }
+              ];
+
+              for (let sd = 0; sd < sides.length; sd++) {
+                const { sign, faceAngle } = sides[sd];
+                const shW = 7.8;
+                const shD = 12.5;
+                const offsetDist = hw + 2.0 + shD / 2; // 深度一半 + 人行道 2.0m + 半路寬
+                const bx = px + nx * offsetDist * sign;
+                const bz = pz + nz * offsetDist * sign;
+
+                // 檢查是否與現有 Overture 建築過近 (< 7.0m)
+                let tooClose = false;
+                for (let eb = 0; eb < existingBuildings.length; eb++) {
+                  const ob = existingBuildings[eb];
+                  if ((ob.cx - bx) ** 2 + (ob.cz - bz) ** 2 < 7.0 * 7.0) {
+                    tooClose = true;
+                    break;
+                  }
                 }
-              }
+                if (tooClose) continue;
 
-              // 檢查是否落入地標排除範圍
-              const inLm = LANDMARK_CONFIGS.some((lm) => {
-                const dSq = (lm.x - bx) ** 2 + (lm.z - bz) ** 2;
-                return dSq < (lm.exclusionRadius || 45) ** 2;
-              });
+                // 檢查是否與其他已放置騎樓過近 (< 6.2m)
+                for (let pi = 0; pi < placedInfill.length; pi++) {
+                  const pp = placedInfill[pi];
+                  if ((pp.x - bx) ** 2 + (pp.z - bz) ** 2 < 6.2 * 6.2) {
+                    tooClose = true;
+                    break;
+                  }
+                }
+                if (tooClose) continue;
 
-              // ★ 嚴格檢查道路與路口淨空：若侵入任何車道或路口轉角緩衝區，一律禁止生成，徹底杜絕擋路死路！
-              const roadClearance = this.getRoadClearanceCorrection(bx, bz);
+                // 檢查路口範圍 (留出路口視野)
+                if (this.junctionList) {
+                  for (let j = 0; j < this.junctionList.length; j++) {
+                    const jn = this.junctionList[j];
+                    if ((jn.x - bx) ** 2 + (jn.z - bz) ** 2 < (jn.radius + 3.0) ** 2) {
+                      tooClose = true;
+                      break;
+                    }
+                  }
+                }
+                if (tooClose) continue;
 
-              if (!hasNearBuilding && !inLm && !roadClearance) {
-                const shW = 10.0 + (p % 3) * 2.0;
-                const shD = 13.0;
-                const shH = 12.0 + ((s + p) % 4) * 4.0;
-                const shGeom = GeometryBuilder.createShophouseGeometry(
-                  { x: bx, z: bz },
+                // 檢查地標排除範圍
+                if (LANDMARK_CONFIGS.some(lm => (lm.x - bx) ** 2 + (lm.z - bz) ** 2 < (lm.exclusionRadius || 45) ** 2)) {
+                  continue;
+                }
+
+                // 檢查車道淨空
+                if (this.getRoadClearanceCorrection(bx, bz)) continue;
+
+                // 依位置確定性隨機風格與樓高 (3~6 層樓)
+                const sIdx = Math.abs(Math.floor(bx * 0.19 + bz * 0.27)) % 10;
+                const shH = 12.0 + (sIdx % 4) * 3.5;
+
+                const arcadeGeom = TaiwanArcadeBuilder.createArcadeShophouseMesh(
+                  { x: bx, y: 0, z: bz },
                   faceAngle,
-                  shW, shD, shH
+                  shW, shD, shH,
+                  sIdx
                 );
-                if (shGeom) {
-                  buildingGeometries.push(shGeom);
+
+                if (arcadeGeom) {
+                  buildingGeometries.push(arcadeGeom);
+                  placedInfill.push({ x: bx, z: bz });
                   existingBuildings.push({ cx: bx, cz: bz, width: shW, depth: shD, ringMeters: [] });
                 }
               }
@@ -1004,9 +1077,24 @@ export class WorldChunkManager {
         }
       }
       const mergeFunc = BufferGeometryUtils.mergeGeometries || BufferGeometryUtils.mergeBufferGeometries;
-      const mergedBuildingGeom = mergeFunc.call(BufferGeometryUtils, buildingGeometries, true);
+      const mergedBuildingGeom = mergeFunc.call(BufferGeometryUtils, buildingGeometries, false);
 
       if (mergedBuildingGeom) {
+        // 自行重新映射所有子幾何體之 groups，確保各部件精準對應 this.buildingMaterialArray 索引 (0~18)
+        mergedBuildingGeom.clearGroups();
+        let groupOffset = 0;
+        for (const bg of buildingGeometries) {
+          const bgCount = bg.index ? bg.index.count : bg.attributes.position.count;
+          if (bg.groups && bg.groups.length > 0) {
+            for (const grp of bg.groups) {
+              mergedBuildingGeom.addGroup(groupOffset + grp.start, grp.count, grp.materialIndex);
+            }
+          } else {
+            mergedBuildingGeom.addGroup(groupOffset, bgCount, 0);
+          }
+          groupOffset += bgCount;
+        }
+
         mergedBuildingGeom.computeBoundingSphere();
         mergedBuildingGeom.computeBoundingBox();
 

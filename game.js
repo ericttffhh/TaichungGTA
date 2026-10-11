@@ -13,6 +13,7 @@ import { TaiwanTextureFactory, TAIWAN_BUILDING_STYLES } from './textures.js';
 import { GtaGameplayManager } from './gtaGameplay.js';
 import { LandmarkBuilder } from './landmarkBuilder.js';
 import { soundManager } from './soundSystem.js';
+import { TaiwanTrafficSignalSystem, TaiwanStreetscapeTextures } from './taiwanStreetscape.js';
 
 window.THREE = THREE;
 window.CANNON = CANNON;
@@ -2653,12 +2654,16 @@ class StreetPropsSystem {
   constructor(scene, roadSegments, junctions = []) {
     this.scene = scene;
     this.roadSegments = roadSegments;
-    this.junctions = junctions;
+    // 依距離市中心 (0, 0) 排序路口，確保市中心與玩家出生地周遭優先完整覆蓋紅綠燈
+    this.junctions = (junctions && junctions.length > 0)
+      ? [...junctions].sort((a, b) => (a.x * a.x + a.z * a.z) - (b.x * b.x + b.z * b.z))
+      : [];
     this.signalTimer = 0;
     this.streetlightsMesh = null;
     this.lanternsMesh = null;
     this.treesMesh = null;
     this.trafficSignalsPoleMesh = null;
+    this.streetSignMesh = null;
     this.redMesh = null;
     this.yellowMesh = null;
     this.greenMesh = null;
@@ -2825,44 +2830,30 @@ class StreetPropsSystem {
     }
 
     // ----------------------------------------------------
-    // B. 路口三色號誌紅綠燈 (立桿 + 懸臂橫桿 + 車道號誌箱 + 行人號誌箱 + 台灣路名牌)
+    // B. 路口三色號誌紅綠燈 (L型懸臂鋼桿 + 橫式號誌燈箱 + 遮光罩 + 綠底白字路名牌 + 行人號誌箱)
     // ----------------------------------------------------
-    const postGeom = new THREE.CylinderGeometry(0.12, 0.16, 6.8, 8);
-    postGeom.translate(0, 3.4, 0);
-    const gantryGeom = new THREE.BoxGeometry(0.14, 0.14, 5.2);
-    gantryGeom.translate(0, 6.2, 2.6);
-    const boxGeom = new THREE.BoxGeometry(0.44, 1.35, 0.38);
-    boxGeom.translate(0, 5.9, 4.4);
-    const signBoardGeom = new THREE.BoxGeometry(0.08, 0.6, 2.2);
-    signBoardGeom.translate(0, 6.65, 2.2);
-    const pedBoxGeom = new THREE.BoxGeometry(0.32, 0.65, 0.28);
-    pedBoxGeom.translate(0, 2.8, 0.28);
+    const signalPoleGeom = TaiwanTrafficSignalSystem.createSignalPoleGeometry();
+    const signalPoleMat = new THREE.MeshStandardMaterial({
+      color: 0x2b343d,
+      roughness: 0.45,
+      metalness: 0.55
+    });
 
-    const signalPoleGeom = BufferGeometryUtils.mergeGeometries([postGeom, gantryGeom, boxGeom, signBoardGeom, pedBoxGeom]);
-    const signalPoleMat = new THREE.MeshStandardMaterial({ color: 0x242d38, roughness: 0.5, metalness: 0.4 });
-
-    // 三色號誌發光透鏡 (附圓形遮光罩)
-    const lensR = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 14);
-    lensR.rotateX(Math.PI / 2);
-    lensR.translate(0, 6.32, 4.6);
-
-    const lensY = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 14);
-    lensY.rotateX(Math.PI / 2);
-    lensY.translate(0, 5.9, 4.6);
-
-    const lensG = new THREE.CylinderGeometry(0.15, 0.15, 0.1, 14);
-    lensG.rotateX(Math.PI / 2);
-    lensG.translate(0, 5.48, 4.6);
+    const { lensR, lensY, lensG } = TaiwanTrafficSignalSystem.createLensesGeometry();
+    const streetSignTex = TaiwanStreetscapeTextures.createStreetSignTexture('臺灣大道');
+    const plateGeom = new THREE.PlaneGeometry(2.2, 0.55);
+    plateGeom.translate(2.2, 6.8, 0.05);
+    const plateMat = new THREE.MeshBasicMaterial({ map: streetSignTex });
 
     const lightPositions = [];
 
-    // 優先在真實路口 (Junctions) 的 4 個轉角人行道路緣上放置紅綠燈號誌桿！
+    // 遍歷所有市區與主要路口，在轉角人行道緣石精準架設 L 型懸臂號誌桿
     if (this.junctions && this.junctions.length > 0) {
       for (let j = 0; j < this.junctions.length; j++) {
         const jn = this.junctions[j];
-        if (jn.connectedCount < 3) continue;
+        if (jn.connectedCount < 2) continue;
 
-        const R = jn.radius;
+        const R = jn.radius || 10.0;
         const cosA = Math.cos(jn.primaryAngle || 0);
         const sinA = Math.sin(jn.primaryAngle || 0);
 
@@ -2886,32 +2877,36 @@ class StreetPropsSystem {
             matrix: dummy.matrix.clone(),
             dir: co.dir
           });
-          if (lightPositions.length >= 240) break;
+          if (lightPositions.length >= 1000) break;
         }
-        if (lightPositions.length >= 240) break;
+        if (lightPositions.length >= 1000) break;
       }
     }
 
     if (lightPositions.length > 0) {
       this.trafficSignalsPoleMesh = new THREE.InstancedMesh(signalPoleGeom, signalPoleMat, lightPositions.length);
-      this.redMesh = new THREE.InstancedMesh(lensR, new THREE.MeshBasicMaterial({ color: 0x330000 }), lightPositions.length);
-      this.yellowMesh = new THREE.InstancedMesh(lensY, new THREE.MeshBasicMaterial({ color: 0x332200 }), lightPositions.length);
-      this.greenMesh = new THREE.InstancedMesh(lensG, new THREE.MeshBasicMaterial({ color: 0x003311 }), lightPositions.length);
+      this.streetSignMesh = new THREE.InstancedMesh(plateGeom, plateMat, lightPositions.length);
+      this.redMesh = new THREE.InstancedMesh(lensR, new THREE.MeshBasicMaterial({ color: 0x220000 }), lightPositions.length);
+      this.yellowMesh = new THREE.InstancedMesh(lensY, new THREE.MeshBasicMaterial({ color: 0x221a00 }), lightPositions.length);
+      this.greenMesh = new THREE.InstancedMesh(lensG, new THREE.MeshBasicMaterial({ color: 0x002211 }), lightPositions.length);
 
       for (let i = 0; i < lightPositions.length; i++) {
         const lp = lightPositions[i];
         this.trafficSignalsPoleMesh.setMatrixAt(i, lp.matrix);
+        this.streetSignMesh.setMatrixAt(i, lp.matrix);
         this.redMesh.setMatrixAt(i, lp.matrix);
         this.yellowMesh.setMatrixAt(i, lp.matrix);
         this.greenMesh.setMatrixAt(i, lp.matrix);
       }
 
       this.trafficSignalsPoleMesh.instanceMatrix.needsUpdate = true;
+      this.streetSignMesh.instanceMatrix.needsUpdate = true;
       this.redMesh.instanceMatrix.needsUpdate = true;
       this.yellowMesh.instanceMatrix.needsUpdate = true;
       this.greenMesh.instanceMatrix.needsUpdate = true;
 
       this.scene.add(this.trafficSignalsPoleMesh);
+      this.scene.add(this.streetSignMesh);
       this.scene.add(this.redMesh);
       this.scene.add(this.yellowMesh);
       this.scene.add(this.greenMesh);
@@ -2921,7 +2916,7 @@ class StreetPropsSystem {
       try {
         const tex = TextureGenerator.createPedestrianSignalTextures();
         const pedGeom = new THREE.PlaneGeometry(0.26, 0.52);
-        pedGeom.translate(0, 2.8, 0.43);
+        pedGeom.translate(0, 2.8, 0.40);
         const mk = (map) => new THREE.InstancedMesh(pedGeom, new THREE.MeshBasicMaterial({ map }), lightPositions.length);
         this.pedRed = mk(tex.redManTex);
         this.pedGreen1 = mk(tex.greenMan1Tex);
