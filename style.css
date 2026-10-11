@@ -1589,21 +1589,162 @@ kbd {
   .gmaps-search-card { width: 100%; }
   .gmaps-place-card { width: calc(100% - 40px); left: 20px; }
   .hud-controls-helper { display: none; } /* 手機版使用專屬觸控按鈕 */
-  .mobile-controls-layer { padding: 12px; }
-  .touch-joystick-base { width: 120px; height: 120px; }
-  .touch-joystick-knob { width: 50px; height: 50px; top: calc(50% - 25px); left: calc(50% - 25px); }
-  .btn-m-circle { width: 44px; height: 44px; }
-  .btn-m-pedal { padding: 10px 18px; font-size: 14px; }
+
+  /* =========================================================
+     手機版 UI 整體縮小 (除操作按鈕保持大尺寸易點擊)
+  ========================================================= */
+
+  /* 1. 雷達小地圖移至左上方 (直徑 84px)，徹底釋放左下角搖桿觸控空間 */
   .minimap-wrapper {
-    bottom: 148px;
-    left: 12px;
-    transform: scale(0.82);
-    transform-origin: bottom left;
+    top: 10px;
+    left: 10px;
+    bottom: auto;
+    right: auto;
+    gap: 2px;
+    z-index: 120;
+    transform: none;
   }
+  .minimap-border {
+    width: 84px;
+    height: 84px;
+    border-width: 2px;
+  }
+  .street-name-tag {
+    padding: 1px 7px;
+    font-size: 0.62rem;
+    border-radius: 8px;
+  }
+  .street-name-tag .map-hint {
+    display: none;
+  }
+
+  /* 2. 左上角車輛資訊與血量/護甲/氮氣條 (緊鄰小地圖右側，輕量極簡化) */
+  .top-left-hud {
+    top: 10px;
+    left: 102px;
+    gap: 3px;
+    z-index: 120;
+  }
+  .vehicle-badge {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    gap: 3px;
+    border-radius: 8px;
+  }
+  .veh-icon { font-size: 0.8rem; }
+  .vehicle-badge .veh-switch-tip { display: none; }
+  .bar-container {
+    width: 85px;
+    gap: 3px;
+  }
+  .bar-label {
+    font-size: 0.55rem;
+    width: 28px;
+    letter-spacing: 0.3px;
+  }
+  .bar-bg {
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  /* 3. 右上角星級、金錢與時鐘 (整體縮小 40%，不遮擋畫面) */
+  .top-right-hud {
+    top: 10px;
+    right: 10px;
+    gap: 3px;
+    z-index: 120;
+  }
+  .wanted-level {
+    padding: 2px 6px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+  .wanted-level .star {
+    font-size: 0.85rem;
+  }
+  .cash-display {
+    font-size: 1.15rem;
+    letter-spacing: 1px;
+  }
+  .hud-meta-row {
+    gap: 4px;
+  }
+  .clock-display {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    border-radius: 6px;
+  }
+  .item-badge {
+    padding: 2px 6px;
+    font-size: 0.65rem;
+    border-radius: 6px;
+    gap: 3px;
+  }
+  .item-badge kbd {
+    display: none;
+  }
+
+  /* 4. 頂端路名橫幅 (手機版已有小地圖街道路名，隱藏頂端冗餘大橫幅以徹底清空視野) */
+  .center-banner {
+    display: none;
+  }
+
+  /* 5. 時速表移至右上側 (58px × 58px 數位小圓盤，位於金錢下方，完全不卡底部任何操作按鈕！) */
   .speedo-wrapper {
-    bottom: 148px;
-    right: 12px;
-    transform: scale(0.82);
-    transform-origin: bottom right;
+    position: absolute;
+    top: 76px;
+    right: 10px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: 58px;
+    height: 58px;
+    border-width: 2px;
+    z-index: 120;
+    box-shadow: 0 0 14px rgba(216, 31, 42, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.9);
+  }
+  .speed-num {
+    font-size: 1.25rem;
+  }
+  .speed-unit {
+    font-size: 0.45rem;
+    letter-spacing: 0.5px;
+  }
+  .gear-tag {
+    font-size: 0.55rem;
+    margin-top: -1px;
+  }
+
+  /* 6. 提示吐司訊息 */
+  .toast-notice {
+    top: 110px;
+    font-size: 0.72rem;
+    padding: 4px 12px;
+    max-width: 85vw;
+  }
+
+  /* =========================================================
+     手機版操作按鈕 (除此以外保持大尺寸、舒服好按好觸摸)
+  ========================================================= */
+  .mobile-controls-layer {
+    padding: 12px 14px;
+  }
+  .touch-joystick-base {
+    width: 125px;
+    height: 125px;
+  }
+  .touch-joystick-knob {
+    width: 52px;
+    height: 52px;
+    top: calc(50% - 26px);
+    left: calc(50% - 26px);
+  }
+  .btn-m-pedal {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+  .btn-m-circle {
+    width: 48px;
+    height: 48px;
   }
 }
