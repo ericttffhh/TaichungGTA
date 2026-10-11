@@ -689,74 +689,16 @@ export class SoundSystem {
   // 7. GTA 核心玩法互動音效 (Wanted, Cash, Mission, Eat Egg)
   // ==========================================================================
 
-  // 通緝星級上升 (GTA 重型暗黑黃銅和弦 Stinger)
+  // 通緝星級上升 (依需求停用聲音，僅保留螢幕亮紅邊特效)
   playWantedStarUp(level = 1) {
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    // 低頻震撼 Bass Drop (90Hz -> 30Hz)
-    const sub = this.ctx.createOscillator();
-    sub.type = 'sawtooth';
-    sub.frequency.setValueAtTime(95, now);
-    sub.frequency.exponentialRampToValueAtTime(28, now + 0.6);
-
-    const subGain = this.ctx.createGain();
-    subGain.gain.setValueAtTime(0.55, now);
-    subGain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-
-    sub.connect(subGain);
-    subGain.connect(this.sfxGain);
-    sub.start(now);
-    sub.stop(now + 0.6);
-
-    // 經典 GTA 警示刺擊和弦 (Minor 2nd dissonance)
-    [220, 233.08, 440].forEach(freq => {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(freq, now);
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(1400, now);
-      filter.frequency.exponentialRampToValueAtTime(300, now + 0.55);
-
-      const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.32, now);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.55);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.sfxGain);
-
-      osc.start(now);
-      osc.stop(now + 0.55);
-    });
+    // 依需求關閉通緝音效
   }
 
-  // 通緝消除 (Wanted Cleared)
+  // 通緝消除 (依需求停用聲音)
   playWantedCleared() {
-    this.init();
-    if (!this.ctx) return;
-    const now = this.ctx.currentTime;
-
-    // 無線電靜電聲 + 澄澈兩音釋懷和弦 (F4 -> C5)
-    [349.23, 523.25].forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-
-      const gain = this.ctx.createGain();
-      gain.gain.setValueAtTime(0.24, now + idx * 0.12);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.12 + 0.4);
-
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
-
-      osc.start(now + idx * 0.12);
-      osc.stop(now + idx * 0.12 + 0.4);
-    });
+    // 依需求關閉通緝消除音效
   }
+
 
   // 吃茶葉蛋補血 (Eat Tea Egg) - 咬碎聲 + 治癒上升和弦
   playEatEgg() {

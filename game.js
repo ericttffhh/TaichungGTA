@@ -3730,10 +3730,15 @@ export class TaichungRushApp {
     groundMesh.receiveShadow = true;
     this.scene.add(groundMesh);
 
-    window.addEventListener('resize', () => {
+    const handleWindowResize = () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+    };
+    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(handleWindowResize, 150);
+      setTimeout(handleWindowResize, 350);
     });
   }
 
@@ -3984,7 +3989,30 @@ export class TaichungRushApp {
     this.setupTouchCameraGestures();
   }
 
-  // 手機版虛擬搖桿與操作按鈕
+  // 全螢幕切換功能
+  toggleFullscreen() {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      const docEl = document.documentElement;
+      if (docEl.requestFullscreen) {
+        docEl.requestFullscreen().catch(() => {});
+      } else if (docEl.webkitRequestFullscreen) {
+        docEl.webkitRequestFullscreen();
+      }
+      try {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+      } catch (e) {}
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+    }
+  }
+
+  // 手機版虛擬搖桿與操作按鈕 (完美支援橫屏模式與防卡鍵機制)
   setupMobileControls() {
     const bindTouchBtn = (id, onDown, onUp) => {
       const el = document.getElementById(id);
@@ -4002,6 +4030,7 @@ export class TaichungRushApp {
       };
       el.addEventListener('touchstart', startHandler, { passive: false });
       el.addEventListener('touchend', endHandler, { passive: false });
+      el.addEventListener('touchcancel', endHandler, { passive: false });
       el.addEventListener('mousedown', startHandler);
       el.addEventListener('mouseup', endHandler);
       el.addEventListener('mouseleave', endHandler);
@@ -4018,6 +4047,8 @@ export class TaichungRushApp {
     );
 
     // 快捷功能按鈕
+    bindTouchBtn('btn-m-fullscreen', () => this.toggleFullscreen());
+    bindTouchBtn('btn-m-mission', () => this.gtaManager?.triggerMission());
     bindTouchBtn('btn-m-swap', () => this.vehicle.toggleVehicleType());
     bindTouchBtn('btn-m-heal', () => this.eatEgg());
     bindTouchBtn('btn-m-horn', () => this.gtaManager?.triggerHorn());
@@ -4026,6 +4057,12 @@ export class TaichungRushApp {
     bindTouchBtn('btn-m-map', () => this.mapSystem?.toggle());
     bindTouchBtn('btn-m-reset', () => this.vehicle.resetPosition());
 
+    // 提示關閉按鈕
+    document.getElementById('btn-tip-dismiss')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.getElementById('orientation-tip')?.remove();
+    });
+
     // 虛擬游標方向搖桿 (Virtual Analog Touch Joystick)
     const stickBase = document.getElementById('joystick-base');
     const stickKnob = document.getElementById('joystick-knob');
@@ -4033,7 +4070,7 @@ export class TaichungRushApp {
 
     let stickTouchId = null;
     let baseCenter = { x: 0, y: 0 };
-    const maxRadius = 45; // 搖桿最大位移半徑 (px)
+    let maxRadius = 45; // 搖桿最大位移半徑 (px)
 
     const updateBaseCenter = () => {
       const rect = stickBase.getBoundingClientRect();
@@ -4041,7 +4078,13 @@ export class TaichungRushApp {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2
       };
+      maxRadius = Math.max(30, (rect.width / 2) - 10);
     };
+
+    window.addEventListener('resize', updateBaseCenter);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateBaseCenter, 200);
+    });
 
     const handleStickMove = (clientX, clientY) => {
       const dx = clientX - baseCenter.x;
@@ -4055,8 +4098,8 @@ export class TaichungRushApp {
 
       stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
 
-      // 轉換為前後左右駕駛輸入
-      const deadzone = 12;
+      // 轉換為前後左右駕駛輸入 (動態自適應死區)
+      const deadzone = Math.max(8, maxRadius * 0.22);
       this.inputs.forward = dy < -deadzone;
       this.inputs.backward = dy > deadzone;
       this.inputs.left = dx < -deadzone;

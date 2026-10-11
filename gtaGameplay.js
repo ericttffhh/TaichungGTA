@@ -444,12 +444,6 @@ export class GtaGameplayManager {
     this.wantedCooldown = 12.0; // 12 秒內避開警車可消星
     this.updateWantedUI();
 
-    // 播放 GTA 經典重型暗黑通緝警示音
-    soundManager.playWantedStarUp(this.wantedStars);
-
-    if (this.wantedStars >= 1 && !soundManager.isSirenPlaying) {
-      soundManager.setPoliceSiren(true);
-    }
     this.app.showToast(`🚨 通緝星級上升至 ${this.wantedStars} 星！警網全面攔截！`);
   }
 
@@ -458,7 +452,6 @@ export class GtaGameplayManager {
     this.wantedStars = 0;
     this.wantedCooldown = 0;
     soundManager.setPoliceSiren(false);
-    soundManager.playWantedCleared();
     this.updateWantedUI();
 
     // 遣散警車
@@ -467,21 +460,36 @@ export class GtaGameplayManager {
     this.app.showToast('✅ 成功甩開警方！通緝已撤銷。');
   }
 
-  // 更新通緝星級 HUD
+  // 更新通緝星級 HUD 與螢幕紅邊警示特效
   updateWantedUI() {
     const starContainer = document.getElementById('wanted-stars');
-    if (!starContainer) return;
+    if (starContainer) {
+      const stars = starContainer.querySelectorAll('.star');
+      stars.forEach((s, idx) => {
+        if (idx < this.wantedStars) {
+          s.classList.add('active');
+          s.style.color = this.wantedStars >= 4 ? '#e74c3c' : '#f1c40f';
+        } else {
+          s.classList.remove('active');
+          s.style.color = 'rgba(255, 255, 255, 0.15)';
+        }
+      });
+    }
 
-    const stars = starContainer.querySelectorAll('.star');
-    stars.forEach((s, idx) => {
-      if (idx < this.wantedStars) {
-        s.classList.add('active');
-        s.style.color = this.wantedStars >= 4 ? '#e74c3c' : '#f1c40f';
+    // ★ 通緝螢幕閃爍紅邊警示特效 (無聲音，僅亮紅邊)
+    const redBorder = document.getElementById('wanted-red-border');
+    if (redBorder) {
+      if (this.wantedStars > 0) {
+        redBorder.classList.add('active');
+        if (this.wantedStars >= 4) {
+          redBorder.classList.add('high-alert');
+        } else {
+          redBorder.classList.remove('high-alert');
+        }
       } else {
-        s.classList.remove('active');
-        s.style.color = 'rgba(255, 255, 255, 0.15)';
+        redBorder.classList.remove('active', 'high-alert');
       }
-    });
+    }
   }
 
   // 增加獎金

@@ -123,6 +123,17 @@
   </div>
 
   <!-- ========================================================
+       通緝星級螢幕閃爍紅邊警示 (Wanted Screen Red Border Overlay)
+       ======================================================== -->
+  <div id="wanted-red-border" class="wanted-red-border" aria-hidden="true"></div>
+
+  <!-- 手機直屏時轉向建議提示 -->
+  <div class="orientation-landscape-tip" id="orientation-tip">
+    <span>🔄 建議手機橫放遊玩體驗更佳</span>
+    <button id="btn-tip-dismiss" class="tip-dismiss-btn" aria-label="關閉提示">×</button>
+  </div>
+
+  <!-- ========================================================
        HUD 介面
        ======================================================== -->
   <div id="hud" class="hud-layer hidden">
@@ -240,6 +251,10 @@
     <div class="mobile-actions-zone" id="mobile-actions-zone">
       <!-- 頂端次要操作按鈕 -->
       <div class="mobile-sub-row">
+        <button id="btn-m-fullscreen" class="btn-m-pill" aria-label="全螢幕切換">
+          <span class="m-icon">⛶</span>
+          <span class="m-lbl">全螢幕</span>
+        </button>
         <button id="btn-m-map" class="btn-m-pill" aria-label="全屏地圖">
           <span class="m-icon">🗺️</span>
           <span class="m-lbl">地圖</span>
@@ -256,6 +271,10 @@
 
       <!-- 核心互動按鈕排 -->
       <div class="mobile-grid-row">
+        <button id="btn-m-mission" class="btn-m-circle btn-m-yellow" aria-label="街頭任務">
+          <span class="m-circle-icon">🎯</span>
+          <span class="m-circle-txt">任務</span>
+        </button>
         <button id="btn-m-swap" class="btn-m-circle btn-m-cyan" aria-label="切換載具">
           <span class="m-circle-icon">🛵</span>
           <span class="m-circle-txt">換車</span>
