@@ -14,6 +14,7 @@ import { GtaGameplayManager } from './gtaGameplay.js';
 import { LandmarkBuilder } from './landmarkBuilder.js';
 import { soundManager } from './soundSystem.js';
 import { TaiwanTrafficSignalSystem, TaiwanStreetscapeTextures } from './taiwanStreetscape.js';
+import { PlayerCharacter } from './playerCharacter.js';
 
 window.THREE = THREE;
 window.CANNON = CANNON;
@@ -1826,50 +1827,9 @@ class Vehicle {
       rWheel.position.set(0, 0.28, -0.65);
       this.meshGroup.add(rWheel);
 
-      // 7. ★ 經典台灣騎士 (Taiwanese Rider on Scooter)
-      const riderGroup = new THREE.Group();
-      riderGroup.position.set(0, 0, 0);
-
-      // 安全帽 (3/4 罩安全帽 + 掀蓋透明風鏡)
-      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 14), new THREE.MeshStandardMaterial({ color: 0xe74c3c, roughness: 0.3 }));
-      helmet.position.set(0, 1.76, -0.05);
-      riderGroup.add(helmet);
-
-      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.1, 0.12), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 }));
-      visor.position.set(0, 1.74, 0.08);
-      riderGroup.add(visor);
-
-      // 上半身連帽外套/防風夾克
-      const jacket = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.48, 0.24), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.7 }));
-      jacket.position.set(0, 1.38, -0.06);
-      jacket.rotation.x = 0.15;
-      riderGroup.add(jacket);
-
-      // 雙手握緊龍頭把手
-      [-0.18, 0.18].forEach((ax) => {
-        const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.42), new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.7 }));
-        arm.position.set(ax, 1.34, 0.16);
-        arm.rotation.x = -0.85;
-        arm.rotation.z = ax > 0 ? -0.2 : 0.2;
-        riderGroup.add(arm);
-      });
-
-      // 腿部與踩在腳踏板之雙腳
-      [-0.14, 0.14].forEach((lx) => {
-        const thigh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.38, 0.14), new THREE.MeshStandardMaterial({ color: 0x1a252f, roughness: 0.8 }));
-        thigh.position.set(lx, 0.88, 0.05);
-        thigh.rotation.x = 0.85;
-        riderGroup.add(thigh);
-
-        const shin = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.36, 0.1), new THREE.MeshStandardMaterial({ color: 0x1a252f, roughness: 0.8 }));
-        shin.position.set(lx, 0.58, 0.22);
-        riderGroup.add(shin);
-
-        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.08, 0.18), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }));
-        shoe.position.set(lx, 0.4, 0.24);
-        riderGroup.add(shoe);
-      });
-
+      // 7. ★ 高精細台灣潮流騎士 (Detailed Taiwanese Streetwear Rider on Scooter)
+      const riderGroup = PlayerCharacter.createDetailedRiderMesh();
+      riderGroup.position.set(0, 0.42, -0.15);
       this.meshGroup.add(riderGroup);
     } else if (this.type === 'taxi') {
       // ★ 臺中經典小黃計程車 (Toyota Altis/Wish 造型 + 車頂 TAXI 燈箱 + 門側方格拉條 + 營業車牌)
@@ -2058,6 +2018,17 @@ class Vehicle {
     if (badgeName) badgeName.textContent = titles[this.type];
     if (badgeIcon) badgeIcon.textContent = icons[this.type];
   }
+
+  getVehicleName() {
+    const titles = {
+      scooter: '勁戰 125 經典機車',
+      supercar: '臺中狂飆 競技超跑',
+      police: '臺中市警察局 巡邏警車',
+      taxi: '臺中經典小黃 計程車'
+    };
+    return titles[this.type] || '台中巡航載具';
+  }
+
 
   update(inputs, dt) {
     if (!this.body) return;
@@ -3554,8 +3525,10 @@ export class TaichungRushApp {
     this.renderer = null;
     this.physicsWorld = null;
 
-    // 載具系統
+    // 載具與主角人物雙模式系統 (Vehicle Driving vs On-foot Street Character)
     this.vehicle = null;
+    this.playerMode = 'vehicle'; // 'vehicle' (駕駛模式) | 'onfoot' (人物自由探索模式)
+    this.character = null;
     this.inputs = {
       forward: false,
       backward: false,
@@ -3606,16 +3579,32 @@ export class TaichungRushApp {
     this.currentLandmarkIdx = 0;
     this.gpsTarget = null;
 
+    // 偵測裝置類型以正確切換電腦 (滑鼠鍵盤) / 行動版介面
+    const isDesktopPointer = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const isTouchOnly = (('ontouchstart' in window) || (navigator.maxTouchPoints > 0)) && !isDesktopPointer;
+    if (isTouchOnly) {
+      document.body.classList.add('touch-device');
+    } else {
+      document.body.classList.remove('touch-device');
+    }
+
+
     // 啟動流程
     this.initLoaderCarousel();
     this.initThree();
+    this.character = new PlayerCharacter(this);
+    this.scene.add(this.character.mesh);
+    this.character.mesh.visible = false;
+
     this.initPhysics();
     this.gtaManager = new GtaGameplayManager(this);
     this.initControls();
     this.mapSystem = new GoogleMapSystem(this);
+    this.setupSettingsAndRadio();
     window.taichungApp = this;
     this.loadMapAndBuildWorld();
   }
+
 
   // 啟動載入畫面台中地標輪播輪替 (每 4.5 秒自動淡入淡出並更新地標名稱)
   initLoaderCarousel() {
@@ -3868,7 +3857,15 @@ export class TaichungRushApp {
       }
 
       if (state && code === 'KeyF') {
+        this.togglePlayerMode();
+      }
+
+      if (state && code === 'KeyV') {
         this.vehicle.toggleVehicleType();
+      }
+
+      if (state && (code === 'KeyO' || key === 'o' || key === 'O')) {
+        this.toggleSettingsModal();
       }
 
       if (state && code === 'KeyL') {
@@ -3880,7 +3877,11 @@ export class TaichungRushApp {
       }
 
       if (state && code === 'KeyR') {
-        this.vehicle.resetPosition();
+        if (this.playerMode === 'onfoot') {
+          this.character.setPosition(-160, 1.2, 8, -Math.PI / 2);
+        } else {
+          this.vehicle.resetPosition();
+        }
       }
 
       if (state && code === 'KeyT') {
@@ -3900,7 +3901,7 @@ export class TaichungRushApp {
       }
 
       if (state && (code === 'KeyN' || key === 'n' || key === 'N')) {
-        this.toggleRadio();
+        this.openRadioModal();
       }
 
       if (state && (code === 'KeyB' || key === 'b' || key === 'B')) {
@@ -3916,15 +3917,23 @@ export class TaichungRushApp {
     window.addEventListener('keyup', (e) => onKey(e, false));
 
     // 按鈕綁定
-    document.getElementById('btn-reset')?.addEventListener('click', () => this.vehicle.resetPosition());
+    document.getElementById('btn-reset')?.addEventListener('click', () => {
+      if (this.playerMode === 'onfoot') {
+        this.character.setPosition(-160, 1.2, 8, -Math.PI / 2);
+      } else {
+        this.vehicle.resetPosition();
+      }
+    });
     document.getElementById('btn-landmark')?.addEventListener('click', () => this.teleportToLandmark());
-    document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.vehicle.toggleVehicleType());
+    document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.togglePlayerMode());
     document.getElementById('btn-eat')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-eat-egg')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-mission')?.addEventListener('click', () => this.gtaManager?.triggerMission());
     document.getElementById('btn-shoot')?.addEventListener('click', () => this.gtaManager?.shootGun());
     document.getElementById('btn-horn')?.addEventListener('click', () => this.gtaManager?.triggerHorn());
-    document.getElementById('btn-radio')?.addEventListener('click', () => this.toggleRadio());
+    document.getElementById('btn-radio')?.addEventListener('click', () => this.openRadioModal());
+    document.getElementById('btn-settings')?.addEventListener('click', () => this.toggleSettingsModal());
+
 
     // 大地圖按鈕與 Minimap 點擊打開
     document.getElementById('btn-open-map')?.addEventListener('click', () => this.mapSystem.open());
@@ -4042,20 +4051,38 @@ export class TaichungRushApp {
       () => { this.inputs.forward = false; this.inputs.boost = false; }
     );
     bindTouchBtn('btn-m-brake',
-      () => { this.inputs.backward = true; this.inputs.brake = true; },
-      () => { this.inputs.backward = false; this.inputs.brake = false; }
+      () => {
+        if (this.playerMode === 'onfoot') {
+          this.inputs.brake = true;
+        } else {
+          this.inputs.backward = true;
+          this.inputs.brake = true;
+        }
+      },
+      () => {
+        this.inputs.backward = false;
+        this.inputs.brake = false;
+      }
     );
 
     // 快捷功能按鈕
+    bindTouchBtn('btn-m-settings', () => this.toggleSettingsModal());
     bindTouchBtn('btn-m-fullscreen', () => this.toggleFullscreen());
     bindTouchBtn('btn-m-mission', () => this.gtaManager?.triggerMission());
-    bindTouchBtn('btn-m-swap', () => this.vehicle.toggleVehicleType());
+    bindTouchBtn('btn-m-swap', () => this.togglePlayerMode());
     bindTouchBtn('btn-m-heal', () => this.eatEgg());
     bindTouchBtn('btn-m-horn', () => this.gtaManager?.triggerHorn());
     bindTouchBtn('btn-m-shoot', () => this.gtaManager?.shootGun());
-    bindTouchBtn('btn-m-radio', () => this.nextRadioStation());
+    bindTouchBtn('btn-m-radio', () => this.openRadioModal());
     bindTouchBtn('btn-m-map', () => this.mapSystem?.toggle());
-    bindTouchBtn('btn-m-reset', () => this.vehicle.resetPosition());
+    bindTouchBtn('btn-m-reset', () => {
+      if (this.playerMode === 'onfoot') {
+        this.character.setPosition(-160, 1.2, 8, -Math.PI / 2);
+      } else {
+        this.vehicle.resetPosition();
+      }
+    });
+
 
     // 提示關閉按鈕
     document.getElementById('btn-tip-dismiss')?.addEventListener('click', (e) => {
@@ -4250,6 +4277,7 @@ export class TaichungRushApp {
     const st = soundManager.getCurrentStation();
     const tag = st && st.tag ? `[${st.tag}] ` : '';
     this.showToast(isPlaying ? `📻 車載電台已開啟：${tag}${st.name}` : '🔇 車載電台已關閉');
+    this.updateRadioModalUI();
   }
 
   nextRadioStation() {
@@ -4257,8 +4285,271 @@ export class TaichungRushApp {
     if (st) {
       const tag = st.tag ? `[${st.tag}] ` : '';
       this.showToast(`📻 切換電台頻道：${tag}${st.name}`);
+      this.updateRadioModalUI();
     }
   }
+
+  // ★ 切換主角人物操作模式 (載具模式 vs 步態人物模式)
+  togglePlayerMode(forceMode = null) {
+    const nextMode = forceMode || (this.playerMode === 'vehicle' ? 'onfoot' : 'vehicle');
+    if (this.playerMode === nextMode) return;
+    this.playerMode = nextMode;
+
+    const vehTxt = document.getElementById('btn-veh-txt');
+    const setModeVeh = document.getElementById('set-mode-vehicle');
+    const setModeFoot = document.getElementById('set-mode-onfoot');
+
+    if (this.playerMode === 'onfoot') {
+      const carPos = this.vehicle.meshGroup.position;
+      const carYaw = this.vehicle.currentYaw || 0;
+      // 放置在載具左側 1.6 米
+      const offsetX = Math.cos(carYaw) * 1.6;
+      const offsetZ = -Math.sin(carYaw) * 1.6;
+      this.character.setPosition(carPos.x + offsetX, carPos.y, carPos.z + offsetZ, carYaw);
+      this.character.mesh.visible = true;
+
+      // 煞停原載具
+      this.vehicle.body.velocity.set(0, 0, 0);
+      this.vehicle.body.angularVelocity.set(0, 0, 0);
+      this.vehicle.speed = 0;
+      soundManager.updateEngine(this.vehicle.type, 0, false, false, false, 0.016);
+
+      if (vehTxt) vehTxt.textContent = '上車';
+      if (setModeVeh) setModeVeh.classList.remove('active');
+      if (setModeFoot) setModeFoot.classList.add('active');
+
+      const vehBadge = document.getElementById('hud-veh-name');
+      if (vehBadge) vehBadge.textContent = '徒步自由探索 (自由行走/奔跑/跳躍)';
+      const badgeIcon = document.querySelector('.veh-icon');
+      if (badgeIcon) badgeIcon.textContent = '🚶';
+
+      soundManager.playVehicleSwitch();
+      this.showToast('🚶 已下車進入【人物操作模式】！(WASD / 虛擬搖桿移動，Shift 奔跑，空白鍵跳躍，按 F 或載具鍵隨時上車)');
+    } else {
+      const charPos = this.character.mesh.position;
+      this.vehicle.body.position.set(charPos.x, Math.max(0.6, charPos.y + 0.4), charPos.z);
+      this.vehicle.body.velocity.set(0, 0, 0);
+      this.vehicle.currentYaw = this.character.yaw;
+      this.vehicle.body.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), this.vehicle.currentYaw);
+      this.character.mesh.visible = false;
+
+      if (vehTxt) vehTxt.textContent = '下車';
+      if (setModeVeh) setModeVeh.classList.add('active');
+      if (setModeFoot) setModeFoot.classList.remove('active');
+
+      const vehBadge = document.getElementById('hud-veh-name');
+      if (vehBadge) vehBadge.textContent = this.vehicle.getVehicleName();
+      const badgeIcon = document.querySelector('.veh-icon');
+      if (badgeIcon) badgeIcon.textContent = this.vehicle.type === 'scooter' ? '🛵' : '🏎️';
+
+      soundManager.playVehicleSwitch();
+      this.showToast(`🚗 已登上【${this.vehicle.getVehicleName()}】！(按 F 或載具鍵可自由下車)`);
+    }
+  }
+
+  // ★ 系統設定彈窗控制
+  toggleSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    const isHidden = modal.classList.contains('hidden');
+    if (isHidden) {
+      modal.classList.remove('hidden');
+    } else {
+      modal.classList.add('hidden');
+    }
+  }
+
+  // ★ 車載電台調頻彈窗控制
+  openRadioModal() {
+    const modal = document.getElementById('radio-modal');
+    if (!modal) return;
+    soundManager.init();
+    modal.classList.remove('hidden');
+    this.updateRadioModalUI();
+  }
+
+  closeRadioModal() {
+    const modal = document.getElementById('radio-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  updateRadioModalUI() {
+    const playBtn = document.getElementById('radio-play-btn');
+    const currFreq = document.getElementById('radio-curr-freq');
+    const currName = document.getElementById('radio-curr-name');
+    const waveBars = document.getElementById('radio-wave-bars');
+    const station = soundManager.getCurrentStation();
+
+    if (station) {
+      if (currFreq) currFreq.textContent = station.freq || 'FM RADIO';
+      if (currName) currName.textContent = station.name || '車載電台廣播';
+    }
+
+    if (playBtn) {
+      if (soundManager.radioPlaying) {
+        playBtn.textContent = '⏸ 關閉電台';
+        playBtn.classList.add('playing');
+        if (waveBars) waveBars.classList.add('playing');
+      } else {
+        playBtn.textContent = '▶ 開啟電台';
+        playBtn.classList.remove('playing');
+        if (waveBars) waveBars.classList.remove('playing');
+      }
+    }
+
+    const items = document.querySelectorAll('.station-item-card');
+    items.forEach((item, idx) => {
+      if (idx === soundManager.radioStationIdx) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  setupSettingsAndRadio() {
+    // 1. 設定彈窗控制
+    document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+      document.getElementById('settings-modal')?.classList.add('hidden');
+    });
+    document.getElementById('settings-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'settings-modal') {
+        document.getElementById('settings-modal')?.classList.add('hidden');
+      }
+    });
+
+    const bindVolSlider = (sliderId, valId, onChange) => {
+      const slider = document.getElementById(sliderId);
+      const valEl = document.getElementById(valId);
+      if (!slider) return;
+      slider.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        if (valEl) valEl.textContent = `${Math.round(v)}%`;
+        onChange(v / 100);
+      });
+    };
+
+    bindVolSlider('set-vol-master', 'val-vol-master', (v) => soundManager.setMasterVolume(v));
+    bindVolSlider('set-vol-sfx', 'val-vol-sfx', (v) => soundManager.setSfxVolume(v));
+    bindVolSlider('set-vol-radio', 'val-vol-radio', (v) => soundManager.setRadioVolume(v));
+    bindVolSlider('set-vol-engine', 'val-vol-engine', (v) => soundManager.setEngineVolume(v));
+
+    // 畫質預設 (low, med, high)
+    document.querySelectorAll('[data-quality]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-quality]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const q = btn.dataset.quality;
+        if (q === 'low') {
+          this.renderer.setPixelRatio(0.85);
+          this.renderer.shadowMap.enabled = false;
+        } else if (q === 'med') {
+          this.renderer.setPixelRatio(1.0);
+          this.renderer.shadowMap.enabled = true;
+        } else if (q === 'high') {
+          this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+          this.renderer.shadowMap.enabled = true;
+        }
+        this.showToast(`🎨 畫質已套用：${btn.textContent}`);
+      });
+    });
+
+    // 動態陰影開關
+    document.getElementById('btn-shadow-on')?.addEventListener('click', () => {
+      document.getElementById('btn-shadow-on')?.classList.add('active');
+      document.getElementById('btn-shadow-off')?.classList.remove('active');
+      this.renderer.shadowMap.enabled = true;
+      if (this.dirLight) this.dirLight.castShadow = true;
+      this.showToast('☀️ 動態陰影：已開啟');
+    });
+    document.getElementById('btn-shadow-off')?.addEventListener('click', () => {
+      document.getElementById('btn-shadow-off')?.classList.add('active');
+      document.getElementById('btn-shadow-on')?.classList.remove('active');
+      this.renderer.shadowMap.enabled = false;
+      if (this.dirLight) this.dirLight.castShadow = false;
+      this.showToast('☀️ 動態陰影：已關閉');
+    });
+
+    // 視野渲染距離
+    document.querySelectorAll('[data-dist]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-dist]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const dist = parseInt(btn.dataset.dist, 10);
+        if (this.camera) this.camera.far = dist * 2;
+        if (this.chunkManager) this.chunkManager.loadRadius = dist;
+        this.camera.updateProjectionMatrix();
+        this.showToast(`🔭 渲染距離已調整為：${dist}m`);
+      });
+    });
+
+    // 光影時段
+    document.querySelectorAll('[data-time]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-time]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const t = btn.dataset.time;
+        this.setTimeOfDay(t);
+      });
+    });
+
+    // 主角操作模式切換 (設定面板內按鈕)
+    document.getElementById('set-mode-vehicle')?.addEventListener('click', () => {
+      this.togglePlayerMode('vehicle');
+    });
+    document.getElementById('set-mode-onfoot')?.addEventListener('click', () => {
+      this.togglePlayerMode('onfoot');
+    });
+
+    // 2. 電台調頻彈窗控制
+    document.getElementById('btn-close-radio')?.addEventListener('click', () => this.closeRadioModal());
+    document.getElementById('radio-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'radio-modal') this.closeRadioModal();
+    });
+
+    document.getElementById('radio-play-btn')?.addEventListener('click', () => {
+      soundManager.init();
+      soundManager.toggleRadio();
+      this.updateRadioModalUI();
+    });
+
+    const rSlider = document.getElementById('radio-vol-slider');
+    const rVal = document.getElementById('radio-vol-val');
+    if (rSlider) {
+      rSlider.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        if (rVal) rVal.textContent = `${Math.round(v)}%`;
+        soundManager.setRadioVolume(v / 100);
+      });
+    }
+
+    const listEl = document.getElementById('radio-stations-list');
+    if (listEl && soundManager.radioStations) {
+      listEl.innerHTML = '';
+      soundManager.radioStations.forEach((st, idx) => {
+        const card = document.createElement('div');
+        card.className = `station-item-card ${idx === soundManager.radioStationIdx ? 'active' : ''}`;
+        card.innerHTML = `
+          <div class="station-item-meta">
+            <div class="st-freq">${st.freq || 'FM'}</div>
+            <div class="st-name">${st.name}</div>
+          </div>
+          <span class="st-tag-badge">${st.tag || 'RADIO'}</span>
+        `;
+        card.addEventListener('click', () => {
+          soundManager.init();
+          soundManager.setStation(idx);
+          if (!soundManager.radioPlaying) {
+            soundManager.toggleRadio();
+          }
+          this.updateRadioModalUI();
+          this.showToast(`📻 切換電台：${st.name}`);
+        });
+        listEl.appendChild(card);
+      });
+    }
+  }
+
 
   // 尋找目標點最近的道路路網座標 (保證傳送 100% 在馬路上，絕不傳入建築物內部)
   findNearestRoadPoint(x, z, maxDist = 450) {
@@ -4952,58 +5243,81 @@ export class TaichungRushApp {
       this.physicsWorld.step(dt);
     }
 
-    // 車輛物理與視覺更新
-    if (this.vehicle) {
+    // 車輛或人物物理與視覺更新
+    let activePos = null;
+    let activeYaw = 0;
+
+    if (this.playerMode === 'onfoot' && this.character) {
+      this.character.update(this.inputs, dt, this.camera);
+      activePos = this.character.mesh.position;
+      activeYaw = this.character.yaw;
+
+      // HUD 時速與檔位更新
+      if (this.speedVal) this.speedVal.textContent = Math.round(this.character.speed);
+      if (this.gearVal) this.gearVal.textContent = this.inputs.boost ? '跑' : '走';
+
+      // 載具維持怠速停泊
+      if (this.vehicle) {
+        soundManager.updateEngine(this.vehicle.type, 0, false, false, false, dt);
+      }
+    } else if (this.vehicle) {
       this.vehicle.update(this.inputs, dt);
+      activePos = this.vehicle.meshGroup.position;
+      activeYaw = this.vehicle.currentYaw !== undefined ? this.vehicle.currentYaw : this.vehicle.meshGroup.rotation.y;
 
       // HUD 時速與檔位更新
       if (this.speedVal) this.speedVal.textContent = this.vehicle.speed;
       if (this.gearVal) this.gearVal.textContent = this.vehicle.gear;
+    }
 
+    if (activePos) {
       // 360 度滑鼠視角自由環繞控制 (Mouse Orbit Camera)
-      const carPos = this.vehicle.meshGroup.position;
-      const carYaw = this.vehicle.currentYaw !== undefined ? this.vehicle.currentYaw : this.vehicle.meshGroup.rotation.y;
+      const isDriving = this.playerMode === 'vehicle' && this.vehicle && this.vehicle.speed > 8;
+      const isWalking = this.playerMode === 'onfoot' && this.character && this.character.speed > 4;
 
-      // 若一段時間無手動旋轉且正在行駛，視角平滑回正到車尾
-      if (!this.isMouseDragging && performance.now() - this.lastOrbitInteractionTime > 2200 && this.vehicle.speed > 8) {
+      // 若一段時間無手動旋轉且正在移動，視角平滑回正
+      if (!this.isMouseDragging && performance.now() - this.lastOrbitInteractionTime > 2200 && (isDriving || isWalking)) {
         this.orbitYaw *= 0.96;
       }
 
       // 計算總相機偏角與球形三維軌道坐標
-      const totalYaw = carYaw + this.orbitYaw;
-      const horizDist = this.orbitDist * Math.cos(this.orbitPitch);
-      const vertHeight = this.orbitDist * Math.sin(this.orbitPitch) + 1.2;
+      const totalYaw = activeYaw + this.orbitYaw;
+      const horizDist = this.playerMode === 'onfoot' ? Math.max(3.2, this.orbitDist * 0.75) : this.orbitDist;
+      const camPitch = this.playerMode === 'onfoot' ? Math.max(0.12, this.orbitPitch) : this.orbitPitch;
+      const horizProj = horizDist * Math.cos(camPitch);
+      const vertHeight = horizDist * Math.sin(camPitch) + (this.playerMode === 'onfoot' ? 1.5 : 1.2);
 
       const targetCamPos = new THREE.Vector3(
-        carPos.x - Math.sin(totalYaw) * horizDist,
-        carPos.y + vertHeight,
-        carPos.z - Math.cos(totalYaw) * horizDist
+        activePos.x - Math.sin(totalYaw) * horizProj,
+        activePos.y + vertHeight,
+        activePos.z - Math.cos(totalYaw) * horizProj
       );
 
       this.camera.position.lerp(targetCamPos, 0.16);
-      this.camera.lookAt(carPos.x, carPos.y + 1.2, carPos.z);
+      this.camera.lookAt(activePos.x, activePos.y + (this.playerMode === 'onfoot' ? 1.2 : 1.2), activePos.z);
 
       // 平行光陰影中心跟隨玩家，兼顧大範圍與極致陰影細節
       if (this.dirLight) {
-        this.dirLight.position.set(carPos.x + 120, 220, carPos.z + 100);
-        this.dirLight.target.position.copy(carPos);
+        this.dirLight.position.set(activePos.x + 120, 220, activePos.z + 100);
+        this.dirLight.target.position.copy(activePos);
         this.dirLight.target.updateMatrixWorld();
       }
 
       // 偵測目前所在路名
-      this.detectStreetName(carPos);
+      this.detectStreetName(activePos);
 
       // 動態區塊串流管理系統更新 (WorldChunkManager: 500m 半徑動態加載/卸載)
       if (this.chunkManager) {
-        this.chunkManager.update(carPos, dt, this.vehicle.body);
+        const bodyOrDummy = this.playerMode === 'vehicle' ? this.vehicle.body : { position: activePos, velocity: { x: 0, y: 0, z: 0 } };
+        this.chunkManager.update(activePos, dt, bodyOrDummy);
       }
 
       // 繪製 Minimap 雷達小地圖
-      this.drawMinimap(carPos);
+      this.drawMinimap(activePos);
 
       // GPS 導航距離更新
       if (this.gpsTarget) {
-        const dist = Math.hypot(carPos.x - this.gpsTarget.x, carPos.z - this.gpsTarget.z);
+        const dist = Math.hypot(activePos.x - this.gpsTarget.x, activePos.z - this.gpsTarget.z);
         const distEl = document.getElementById('gps-dist-val');
         if (distEl) distEl.textContent = `(${Math.round(dist)} 公尺)`;
 
@@ -5019,6 +5333,7 @@ export class TaichungRushApp {
         this.mapSystem.render();
       }
     }
+
 
     // GTA 核心玩法系統更新 (通緝星級、警車 AI 追擊、子彈射擊、街頭任務倒數)
     if (this.gtaManager) {

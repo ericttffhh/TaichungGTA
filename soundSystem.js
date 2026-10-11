@@ -1049,6 +1049,50 @@ export class SoundSystem {
     return this.radioStations[this.radioStationIdx];
   }
 
+  setStation(idx) {
+    this.init();
+    if (idx >= 0 && idx < this.radioStations.length) {
+      this.radioStationIdx = idx;
+      if (this.radioPlaying) {
+        this.stopRadioTrack();
+        this.startRadioTrack();
+      }
+    }
+    return this.radioStations[this.radioStationIdx];
+  }
+
+  setRadioVolume(vol) {
+    this.radioVolume = Math.max(0, Math.min(1, vol));
+    if (this.radioGain && this.ctx) {
+      this.radioGain.gain.setValueAtTime(this.radioVolume * 0.85, this.ctx.currentTime);
+    }
+    if (this.liveAudio) {
+      this.liveAudio.volume = this.radioVolume;
+    }
+  }
+
+  setMasterVolume(vol) {
+    this.masterVolume = Math.max(0, Math.min(1, vol));
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
+    }
+  }
+
+  setSfxVolume(vol) {
+    this.sfxVolume = Math.max(0, Math.min(1, vol));
+    if (this.sfxGain && this.ctx) {
+      this.sfxGain.gain.setValueAtTime(this.sfxVolume, this.ctx.currentTime);
+    }
+  }
+
+  setEngineVolume(vol) {
+    this.engineVolume = Math.max(0, Math.min(1, vol));
+    if (this.engineGain && this.ctx) {
+      this.engineGain.gain.setValueAtTime(this.engineVolume * 0.35, this.ctx.currentTime);
+    }
+  }
+
+
   getCurrentStation() {
     return this.radioStations[this.radioStationIdx];
   }

@@ -223,9 +223,10 @@
       <button class="helper-btn btn-act-radio" id="btn-radio"><kbd>N</kbd> 電台</button>
       <button class="helper-btn btn-act-landmark" id="btn-landmark"><kbd>T</kbd> 傳送</button>
       <button class="helper-btn btn-act-map" id="btn-open-map"><kbd>M</kbd> 地圖</button>
-      <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> 載具</button>
+      <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> <span id="btn-veh-txt">下車</span></button>
       <button class="helper-btn btn-act-eat" id="btn-eat"><kbd>E</kbd> 補血</button>
       <button class="helper-btn btn-act-reset" id="btn-reset"><kbd>R</kbd> 翻正</button>
+      <button class="helper-btn btn-act-settings" id="btn-settings"><kbd>O</kbd> 設定</button>
     </div>
   </div>
 
@@ -251,6 +252,10 @@
     <div class="mobile-actions-zone" id="mobile-actions-zone">
       <!-- 頂端次要操作按鈕 -->
       <div class="mobile-sub-row">
+        <button id="btn-m-settings" class="btn-m-pill" aria-label="系統設定">
+          <span class="m-icon">⚙️</span>
+          <span class="m-lbl">設定</span>
+        </button>
         <button id="btn-m-fullscreen" class="btn-m-pill" aria-label="全螢幕切換">
           <span class="m-icon">⛶</span>
           <span class="m-lbl">全螢幕</span>
@@ -369,6 +374,132 @@
           <button class="place-nav-btn" id="place-nav-btn">🚩 設定 GPS 導航路線</button>
           <button class="place-nav-btn" id="place-teleport-btn" style="background:#00b894; margin-left:8px;">🚀 傳送至道路</button>
           <button class="place-clear-btn" id="btn-clear-gps">清除導航</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       車載電台互動調頻器彈窗 (Radio Tuner Modal)
+       ======================================================== -->
+  <div id="radio-modal" class="game-modal-overlay hidden">
+    <div class="radio-card-panel">
+      <div class="modal-card-header">
+        <div class="modal-card-title">
+          <span class="m-title-icon">📻</span>
+          <span>車載廣播電台 · FM TUNER</span>
+        </div>
+        <button class="modal-card-close" id="btn-close-radio">✕</button>
+      </div>
+
+      <div class="radio-status-card">
+        <div class="radio-wave-anim" id="radio-wave-bars">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="radio-current-info">
+          <div class="radio-curr-freq" id="radio-curr-freq">FM 94.5</div>
+          <div class="radio-curr-name" id="radio-curr-name">警察廣播電臺 臺中分臺</div>
+        </div>
+        <button class="radio-toggle-btn" id="radio-play-btn">▶ 開啟電台</button>
+      </div>
+
+      <div class="radio-vol-row">
+        <span>🔊 電台音量</span>
+        <input type="range" id="radio-vol-slider" min="0" max="100" value="70">
+        <span id="radio-vol-val">70%</span>
+      </div>
+
+      <div class="radio-stations-list" id="radio-stations-list">
+        <!-- 動態渲染電台清單 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       遊戲核心參數設定彈窗 (Settings Modal)
+       ======================================================== -->
+  <div id="settings-modal" class="game-modal-overlay hidden">
+    <div class="settings-card-panel">
+      <div class="modal-card-header">
+        <div class="modal-card-title">
+          <span class="m-title-icon">⚙️</span>
+          <span>遊戲參數設定 · SYSTEM SETTINGS</span>
+        </div>
+        <button class="modal-card-close" id="btn-close-settings">✕</button>
+      </div>
+
+      <div class="settings-content">
+        <!-- 聲音設定 -->
+        <div class="settings-section">
+          <h4 class="settings-sec-title">🔊 聲音與音量控制 (Audio Parameters)</h4>
+          <div class="setting-item-row">
+            <span class="set-label">主音量 (Master)</span>
+            <input type="range" id="set-vol-master" min="0" max="100" value="85">
+            <span class="set-val" id="val-vol-master">85%</span>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">音效音量 (SFX)</span>
+            <input type="range" id="set-vol-sfx" min="0" max="100" value="90">
+            <span class="set-val" id="val-vol-sfx">90%</span>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">電台音量 (Radio)</span>
+            <input type="range" id="set-vol-radio" min="0" max="100" value="70">
+            <span class="set-val" id="val-vol-radio">70%</span>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">引擎音量 (Engine)</span>
+            <input type="range" id="set-vol-engine" min="0" max="100" value="80">
+            <span class="set-val" id="val-vol-engine">80%</span>
+          </div>
+        </div>
+
+        <!-- 畫質與效能設定 -->
+        <div class="settings-section">
+          <h4 class="settings-sec-title">🎨 畫面與效能參數 (Graphics & Performance)</h4>
+          <div class="setting-item-row">
+            <span class="set-label">畫質預設</span>
+            <div class="btn-group-toggle">
+              <button class="toggle-btn" data-quality="low">流暢</button>
+              <button class="toggle-btn active" data-quality="med">平衡</button>
+              <button class="toggle-btn" data-quality="high">極致</button>
+            </div>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">即時動態陰影</span>
+            <div class="btn-group-toggle">
+              <button class="toggle-btn active" id="btn-shadow-on">開啟</button>
+              <button class="toggle-btn" id="btn-shadow-off">關閉</button>
+            </div>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">視野渲染距離</span>
+            <div class="btn-group-toggle">
+              <button class="toggle-btn" data-dist="300">300m</button>
+              <button class="toggle-btn active" data-dist="500">500m</button>
+              <button class="toggle-btn" data-dist="800">800m</button>
+            </div>
+          </div>
+          <div class="setting-item-row">
+            <span class="set-label">光影時段</span>
+            <div class="btn-group-toggle">
+              <button class="toggle-btn active" data-time="day">☀️ 白天</button>
+              <button class="toggle-btn" data-time="sunset">🌅 夕陽</button>
+              <button class="toggle-btn" data-time="night">🌙 夜景</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 操作模式設定 -->
+        <div class="settings-section">
+          <h4 class="settings-sec-title">🚶 控制與遊玩模式 (Gameplay Mode)</h4>
+          <div class="setting-item-row">
+            <span class="set-label">主角操作模式</span>
+            <div class="btn-group-toggle">
+              <button class="toggle-btn active" id="set-mode-vehicle">🛵 載具駕駛</button>
+              <button class="toggle-btn" id="set-mode-onfoot">🚶 徒步探索</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

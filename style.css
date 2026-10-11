@@ -1374,17 +1374,35 @@ kbd {
 
 /* =========================================================
    手機版螢幕觸控系統：虛擬游標搖桿與操作按鈕 (Mobile Touch Controls)
+   電腦模式 (滑鼠+鍵盤) 預設嚴格隱藏按鈕！僅在觸控裝置顯示
 ========================================================= */
 .mobile-controls-layer {
   position: absolute;
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  display: flex;
+  display: none !important; /* 電腦桌面模式預設隱藏！ */
   justify-content: space-between;
   align-items: flex-end;
   padding: clamp(16px, 3.5vw, 32px);
   box-sizing: border-box;
+}
+
+body.touch-device .mobile-controls-layer {
+  display: flex !important;
+}
+
+body.touch-device .hud-controls-helper {
+  display: none !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-controls-layer {
+    display: none !important;
+  }
+  .hud-controls-helper {
+    display: flex !important;
+  }
 }
 
 /* 左側：虛擬游標搖桿底盤 */
@@ -2012,4 +2030,373 @@ kbd {
     bottom: 14px;
   }
 }
+
+/* =========================================================
+   通訊與設定彈窗通用樣式 (Game Modal Overlay & Panels)
+========================================================= */
+.game-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(4, 7, 14, 0.78);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.settings-card-panel, .radio-card-panel {
+  background: linear-gradient(135deg, rgba(16, 22, 34, 0.95), rgba(8, 12, 20, 0.98));
+  border: 1.5px solid rgba(212, 175, 55, 0.45);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8), 0 0 24px rgba(212, 175, 55, 0.15);
+  border-radius: 20px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #fff;
+}
+
+.modal-card-header {
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.modal-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+  color: #ffd700;
+}
+
+.modal-card-close {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ccc;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.modal-card-close:hover {
+  background: rgba(231, 76, 60, 0.8);
+  color: #fff;
+  border-color: #e74c3c;
+}
+
+.settings-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.settings-sec-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #00cec9;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.setting-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.82rem;
+}
+
+.set-label {
+  font-weight: 600;
+  color: #ddd;
+  min-width: 110px;
+}
+
+.setting-item-row input[type="range"] {
+  flex: 1;
+  accent-color: #ffd700;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.set-val {
+  min-width: 42px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: #f1c40f;
+  font-weight: 700;
+}
+
+.btn-group-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.toggle-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #bbb;
+  padding: 5px 12px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #d4af37, #aa8214);
+  border-color: #ffd700;
+  color: #000;
+  font-weight: 900;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.4);
+}
+
+/* --- 車載電台卡片樣式 --- */
+.radio-status-card {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.radio-wave-anim {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 24px;
+}
+
+.radio-wave-anim span {
+  width: 4px;
+  height: 6px;
+  background: #00cec9;
+  border-radius: 2px;
+  animation: wavePulse 0.8s infinite alternate ease-in-out;
+}
+.radio-wave-anim.playing span {
+  animation-play-state: running;
+}
+.radio-wave-anim:not(.playing) span {
+  animation-play-state: paused;
+  height: 4px !important;
+  opacity: 0.4;
+}
+.radio-wave-anim span:nth-child(2) { animation-delay: 0.15s; height: 16px; }
+.radio-wave-anim span:nth-child(3) { animation-delay: 0.3s; height: 22px; }
+.radio-wave-anim span:nth-child(4) { animation-delay: 0.45s; height: 12px; }
+.radio-wave-anim span:nth-child(5) { animation-delay: 0.6s; height: 18px; }
+
+@keyframes wavePulse {
+  0% { height: 4px; }
+  100% { height: 24px; }
+}
+
+.radio-current-info {
+  flex: 1;
+}
+
+.radio-curr-freq {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: #ffd700;
+  line-height: 1.1;
+}
+
+.radio-curr-name {
+  font-size: 0.78rem;
+  color: #ccc;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.radio-toggle-btn {
+  background: linear-gradient(135deg, #00b894, #008f72);
+  border: 1px solid #55efc4;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(0, 184, 148, 0.4);
+}
+.radio-toggle-btn.playing {
+  background: linear-gradient(135deg, #d63031, #b71c1c);
+  border-color: #ff7675;
+  box-shadow: 0 4px 14px rgba(214, 48, 49, 0.4);
+}
+
+.radio-vol-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  font-size: 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.radio-vol-row input[type="range"] {
+  flex: 1;
+  accent-color: #00cec9;
+  height: 5px;
+  cursor: pointer;
+}
+
+.radio-stations-list {
+  padding: 12px 16px;
+  overflow-y: auto;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.station-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.station-item-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(4px);
+}
+
+.station-item-card.active {
+  background: rgba(212, 175, 55, 0.18);
+  border-color: #ffd700;
+}
+
+.station-item-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.st-freq {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #ffd700;
+}
+
+.st-name {
+  font-size: 0.76rem;
+  color: #ddd;
+}
+
+.st-tag-badge {
+  font-size: 0.65rem;
+  padding: 2px 7px;
+  border-radius: 8px;
+  background: rgba(0, 206, 201, 0.2);
+  color: #00cec9;
+  border: 1px solid rgba(0, 206, 201, 0.4);
+  font-weight: 700;
+}
+
+/* =========================================================
+   電腦模式 vs 行動觸控模式 終極優先級控制
+   電腦桌面模式：徹底隱藏所有觸控按鈕，並保證顯示底部操作橫條！
+   手機觸控模式：顯示螢幕操作按鈕與搖桿，隱藏底部橫條！
+========================================================= */
+body:not(.touch-device) .mobile-controls-layer,
+body:not(.touch-device) #mobile-controls,
+body:not(.touch-device) .mobile-actions-zone,
+body:not(.touch-device) .mobile-stick-zone {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+body:not(.touch-device) .hud-controls-helper {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mobile-controls-layer,
+  #mobile-controls,
+  .mobile-actions-zone,
+  .mobile-stick-zone {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  .hud-controls-helper {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+}
+
+body.touch-device .mobile-controls-layer,
+body.touch-device #mobile-controls {
+  display: flex !important;
+  visibility: visible !important;
+}
+
+body.touch-device .hud-controls-helper {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+
 
