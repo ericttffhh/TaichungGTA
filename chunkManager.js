@@ -344,6 +344,13 @@ export class WorldChunkManager {
       ...this.facadeMats     // 19 ~ 34: 經典風格
     ];
 
+    // ★ 關鍵修復：取得分層建築材質並記錄基礎索引，避免 shopBase / upperBase 為 undefined 導致 NaN 材質索引而使牆面消失、只剩浮空屋頂！
+    const facadeSets = getFacadeMaterialSets();
+    this.shopBase = this.buildingMaterialArray.length;
+    this.buildingMaterialArray.push(...facadeSets.shops);
+    this.upperBase = this.buildingMaterialArray.length;
+    this.buildingMaterialArray.push(...facadeSets.uppers);
+
     // 水面材質 (深藍微透明、下陷 0.5 米、帶光澤微波)
     this.waterMaterial = new THREE.MeshStandardMaterial({
       color: 0x0984e3,
@@ -439,12 +446,18 @@ export class WorldChunkManager {
         const cx = sumX / rawRing.length;
         const cz = sumZ / rawRing.length;
 
-        // 排除地標模型專屬範圍 (台中火車站、李方艾美、亞洲大飯店、科博館、國美館、大慶站)
+        // 排除地標模型專屬範圍 (擴大至建築本體與站前廣場/腹地，防止任何多邊形覆蓋或穿透地標)
         const inLm = LANDMARK_CONFIGS.some((lm) => {
+          const r = lm.exclusionRadius || 55;
           const dx = cx - lm.x;
           const dz = cz - lm.z;
-          const radius = lm.id === 'taichung_station' ? 36 : (lm.exclusionRadius || 40);
-          return dx * dx + dz * dz < radius * radius;
+          if (dx * dx + dz * dz < r * r) return true;
+          // 包圍盒重疊檢查：防止大型地塊中心偏遠但邊緣多邊形切過地標
+          if (lm.x >= minX - r * 0.35 && lm.x <= maxX + r * 0.35 &&
+            lm.z >= minZ - r * 0.35 && lm.z <= maxZ + r * 0.35) {
+            return true;
+          }
+          return false;
         });
         if (inLm) continue;
 
@@ -972,8 +985,11 @@ export class WorldChunkManager {
                 }
                 if (tooClose) continue;
 
-                // 檢查地標排除範圍
-                if (LANDMARK_CONFIGS.some(lm => (lm.x - bx) ** 2 + (lm.z - bz) ** 2 < (lm.exclusionRadius || 45) ** 2)) {
+                // 檢查地標排除範圍 (含緩衝，防止街屋連棟侵入站前廣場與地標)
+                if (LANDMARK_CONFIGS.some(lm => {
+                  const r = (lm.exclusionRadius || 55) + 6.0;
+                  return (lm.x - bx) ** 2 + (lm.z - bz) ** 2 < r * r;
+                })) {
                   continue;
                 }
 
@@ -1069,11 +1085,23 @@ export class WorldChunkManager {
     let chunkVertices = 0;
 
     if (buildingGeometries.length > 0) {
-      // 統一屬性：部分幾何 (連棟街屋等) 沒有頂點色，補上白色以便合併
-      for (const g of buildingGeometries) {
+      // 統一屬性：確保所有幾何體皆為非索引 (Non-Indexed)，且皆具備 position, normal, uv, color 屬性
+      for (let i = 0; i < buildingGeometries.length; i++) {
+        let g = buildingGeometries[i];
+        if (g.index) {
+          g = g.toNonIndexed();
+          buildingGeometries[i] = g;
+        }
         if (!g.attributes.color) {
           const cnt = g.attributes.position.count;
           g.setAttribute('color', new THREE.Float32BufferAttribute(new Array(cnt * 3).fill(1), 3));
+        }
+        if (!g.attributes.normal) {
+          g.computeVertexNormals();
+        }
+        if (!g.attributes.uv) {
+          const cnt = g.attributes.position.count;
+          g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(cnt * 2).fill(0), 2));
         }
       }
       const mergeFunc = BufferGeometryUtils.mergeGeometries || BufferGeometryUtils.mergeBufferGeometries;

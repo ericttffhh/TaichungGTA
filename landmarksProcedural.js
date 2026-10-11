@@ -235,34 +235,37 @@ export class ProceduralLandmarks {
     porch.position.set(0, 6.9, -26.3);
     group.add(porch);
 
-    // 後方鋼構拱形月台雨棚 (玻璃 + 鋼骨)
+    // 站前廣場基座與月台地坪 (高出地表 0.28m，徹底消除周邊道路人行道掩埋與破面)
+    const plazaMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#c8ccc7') });
+    const plaza = new THREE.Mesh(new THREE.BoxGeometry(hallW + 20, 0.35, 102), plazaMat);
+    plaza.position.set(0, 0.175, 4);
+    plaza.receiveShadow = true;
+    group.add(plaza);
+
+    // 後方鋼構拱形月台雨棚 (玻璃 + 鋼骨) - 頂部拱形半圓拱高抬升至月台上方，絕不潛入地底
     const vault = new THREE.Mesh(
       new THREE.CylinderGeometry(15, 15, hallW, 20, 1, true, 0, Math.PI),
       new THREE.MeshStandardMaterial({ color: 0xdfe6e9, metalness: 0.5, roughness: 0.35, side: THREE.DoubleSide })
     );
     vault.rotation.z = Math.PI / 2;
-    vault.rotation.y = 0;
     vault.scale.set(0.55, 1, 1);
-    vault.position.set(0, 0, 8);
-    // 以 rotation 調整後讓半圓朝上
-    vault.rotation.set(0, 0, Math.PI / 2);
-    vault.rotation.order = 'ZYX';
     const vaultGroup = new THREE.Group();
     vaultGroup.add(vault);
     vaultGroup.rotation.y = Math.PI / 2;
-    vaultGroup.position.set(0, 0.2, 14);
+    vaultGroup.position.set(0, 8.25, 14); // 抬升至 y=8.25 使下緣恰好平貼月台 y=0.35
     group.add(vaultGroup);
 
     // 月台平面
     const platform = new THREE.Mesh(new THREE.BoxGeometry(hallW, 0.5, 34), new THREE.MeshLambertMaterial({ map: concreteTexture('#b9bbb8') }));
     platform.position.set(0, 0.25, 12);
     group.add(platform);
+
     // 鋼骨拱肋
     const ribMat = new THREE.MeshLambertMaterial({ color: 0x4b5358 });
     for (let x = -hallW / 2; x <= hallW / 2; x += 7) {
       const rib = new THREE.Mesh(new THREE.TorusGeometry(15, 0.28, 6, 20, Math.PI), ribMat);
       rib.scale.set(1, 0.55, 1);
-      rib.position.set(x, 0.2, 14);
+      rib.position.set(x, 8.25, 14);
       rib.rotation.set(0, 0, 0);
       group.add(rib);
     }

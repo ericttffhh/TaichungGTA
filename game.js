@@ -37,9 +37,9 @@ export const LANDMARK_CONFIGS = [
     z: 145.0,
     rotY: Math.PI * 0.22,
     boxW: 90, boxH: 26, boxD: 70,
-    exclusionRadius: 40,
+    exclusionRadius: 105,
     spawnOffset: { x: -25, z: -65 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'lifang_aimei',
@@ -52,9 +52,9 @@ export const LANDMARK_CONFIGS = [
     z: 138.8,
     rotY: Math.PI * 0.18,
     boxW: 55, boxH: 178, boxD: 55,
-    exclusionRadius: 42,
+    exclusionRadius: 52,
     spawnOffset: { x: -28, z: 6 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'asia_grand_hotel',
@@ -67,9 +67,9 @@ export const LANDMARK_CONFIGS = [
     z: -58.0,
     rotY: Math.PI * 0.18,
     boxW: 68, boxH: 175, boxD: 60,
-    exclusionRadius: 42,
+    exclusionRadius: 52,
     spawnOffset: { x: 22, z: 0 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'museum_science',
@@ -82,9 +82,9 @@ export const LANDMARK_CONFIGS = [
     z: -2183.0,
     rotY: 0,
     boxW: 360, boxH: 40, boxD: 280,
-    exclusionRadius: 100,
+    exclusionRadius: 220,
     spawnOffset: { x: 0, z: 120 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'museum_fine_arts',
@@ -97,9 +97,9 @@ export const LANDMARK_CONFIGS = [
     z: -341.6,
     rotY: 0,
     boxW: 280, boxH: 35, boxD: 215,
-    exclusionRadius: 90,
+    exclusionRadius: 180,
     spawnOffset: { x: 0, z: 110 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'daqing_station',
@@ -112,9 +112,9 @@ export const LANDMARK_CONFIGS = [
     z: 2118.2,
     rotY: Math.PI * 0.22,
     boxW: 240, boxH: 26, boxD: 60,
-    exclusionRadius: 55,
+    exclusionRadius: 140,
     spawnOffset: { x: 15, z: 45 },
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'taichung_park',
@@ -126,9 +126,9 @@ export const LANDMARK_CONFIGS = [
     x: 30.5,
     z: -757.0,
     boxW: 44, boxH: 15, boxD: 40,
-    exclusionRadius: 42,
+    exclusionRadius: 65,
     spawnOffset: { x: 75, z: 25 }, // 精準傳送至台中公園大門口雙十路一段車道上，絕不落入湖水水塘中！
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'taichung_theater',
@@ -140,9 +140,9 @@ export const LANDMARK_CONFIGS = [
     x: -4520.6,
     z: -2760.7,
     boxW: 86, boxH: 46, boxD: 66, // 實體尺寸 約 71m x 52m x 46m
-    exclusionRadius: 50,
+    exclusionRadius: 90,
     spawnOffset: { x: 108, z: 12 }, // 惠來路二段 / 市政北五路路口 (實際 OSM 道路)
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'luce_chapel',
@@ -154,9 +154,9 @@ export const LANDMARK_CONFIGS = [
     x: -8573.9,
     z: -4541.8,
     boxW: 30, boxH: 16, boxD: 20,
-    exclusionRadius: 30,
+    exclusionRadius: 55,
     spawnOffset: { x: -38, z: -39 }, // 約農路 (校內實際道路)，不再落在草坪中央
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'miyahara',
@@ -168,9 +168,9 @@ export const LANDMARK_CONFIGS = [
     x: -121.9,
     z: 22.3,
     boxW: 42, boxH: 18, boxD: 24,
-    exclusionRadius: 30,
+    exclusionRadius: 45,
     spawnOffset: { x: -32, z: 14 }, // 中山路路面
-    yOffset: 0
+    yOffset: 0.25
   },
   {
     id: 'second_market',
@@ -182,9 +182,9 @@ export const LANDMARK_CONFIGS = [
     x: -629.8,
     z: -500.9,
     boxW: 36, boxH: 20, boxD: 36,
-    exclusionRadius: 32,
+    exclusionRadius: 55,
     spawnOffset: { x: 24, z: -4 },
-    yOffset: 0
+    yOffset: 0.25
   }
 ];
 
@@ -3607,6 +3607,7 @@ export class TaichungRushApp {
     this.gpsTarget = null;
 
     // 啟動流程
+    this.initLoaderCarousel();
     this.initThree();
     this.initPhysics();
     this.gtaManager = new GtaGameplayManager(this);
@@ -3614,6 +3615,36 @@ export class TaichungRushApp {
     this.mapSystem = new GoogleMapSystem(this);
     window.taichungApp = this;
     this.loadMapAndBuildWorld();
+  }
+
+  // 啟動載入畫面台中地標輪播輪替 (每 4.5 秒自動淡入淡出並更新地標名稱)
+  initLoaderCarousel() {
+    const slides = document.querySelectorAll('#ld-carousel .ld-slide');
+    const capTitle = document.getElementById('ld-caption-title');
+    const capSub = document.getElementById('ld-caption-sub');
+    if (!slides || slides.length === 0) return;
+
+    let currentIdx = 0;
+    slides.forEach((s, idx) => {
+      if (idx === 0) s.classList.add('active');
+      else s.classList.remove('active');
+    });
+    this.carouselTimer = setInterval(() => {
+      if (this.loader && this.loader.classList.contains('hidden')) {
+        clearInterval(this.carouselTimer);
+        return;
+      }
+      slides[currentIdx].classList.remove('active');
+      currentIdx = (currentIdx + 1) % slides.length;
+      slides[currentIdx].classList.add('active');
+
+      if (capTitle && slides[currentIdx].dataset.title) {
+        capTitle.textContent = slides[currentIdx].dataset.title;
+      }
+      if (capSub && slides[currentIdx].dataset.subtitle) {
+        capSub.textContent = slides[currentIdx].dataset.subtitle;
+      }
+    }, 8000); // 8 秒切換一張 循環
   }
 
   // 提示框
@@ -3897,6 +3928,7 @@ export class TaichungRushApp {
     // 進入遊戲按鈕
     if (this.btnEnterGame) {
       this.btnEnterGame.addEventListener('click', () => {
+        if (this.carouselTimer) clearInterval(this.carouselTimer);
         this.loader.classList.remove('loader-active');
         this.loader.classList.add('hidden');
         if (this.hudLayer) this.hudLayer.classList.remove('hidden');
@@ -3946,6 +3978,219 @@ export class TaichungRushApp {
       },
       { passive: false }
     );
+
+    // ★ 核心功能：手機版游標搖桿、快捷按鈕與手勢縮放/旋轉視角系統
+    this.setupMobileControls();
+    this.setupTouchCameraGestures();
+  }
+
+  // 手機版虛擬搖桿與操作按鈕
+  setupMobileControls() {
+    const bindTouchBtn = (id, onDown, onUp) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const startHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (navigator.vibrate) navigator.vibrate(20);
+        if (onDown) onDown();
+      };
+      const endHandler = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onUp) onUp();
+      };
+      el.addEventListener('touchstart', startHandler, { passive: false });
+      el.addEventListener('touchend', endHandler, { passive: false });
+      el.addEventListener('mousedown', startHandler);
+      el.addEventListener('mouseup', endHandler);
+      el.addEventListener('mouseleave', endHandler);
+    };
+
+    // 核心油門與煞車按鈕
+    bindTouchBtn('btn-m-gas', 
+      () => { this.inputs.forward = true; this.inputs.boost = true; },
+      () => { this.inputs.forward = false; this.inputs.boost = false; }
+    );
+    bindTouchBtn('btn-m-brake',
+      () => { this.inputs.backward = true; this.inputs.brake = true; },
+      () => { this.inputs.backward = false; this.inputs.brake = false; }
+    );
+
+    // 快捷功能按鈕
+    bindTouchBtn('btn-m-swap', () => this.vehicle.toggleVehicleType());
+    bindTouchBtn('btn-m-heal', () => this.eatEgg());
+    bindTouchBtn('btn-m-horn', () => this.gtaManager?.triggerHorn());
+    bindTouchBtn('btn-m-shoot', () => this.gtaManager?.shootGun());
+    bindTouchBtn('btn-m-radio', () => this.nextRadioStation());
+    bindTouchBtn('btn-m-map', () => this.mapSystem?.toggle());
+    bindTouchBtn('btn-m-reset', () => this.vehicle.resetPosition());
+
+    // 虛擬游標方向搖桿 (Virtual Analog Touch Joystick)
+    const stickBase = document.getElementById('joystick-base');
+    const stickKnob = document.getElementById('joystick-knob');
+    if (!stickBase || !stickKnob) return;
+
+    let stickTouchId = null;
+    let baseCenter = { x: 0, y: 0 };
+    const maxRadius = 45; // 搖桿最大位移半徑 (px)
+
+    const updateBaseCenter = () => {
+      const rect = stickBase.getBoundingClientRect();
+      baseCenter = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      };
+    };
+
+    const handleStickMove = (clientX, clientY) => {
+      const dx = clientX - baseCenter.x;
+      const dy = clientY - baseCenter.y;
+      const dist = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+      const clampedDist = Math.min(dist, maxRadius);
+
+      const knobX = Math.cos(angle) * clampedDist;
+      const knobY = Math.sin(angle) * clampedDist;
+
+      stickKnob.style.transform = `translate(${knobX}px, ${knobY}px)`;
+
+      // 轉換為前後左右駕駛輸入
+      const deadzone = 12;
+      this.inputs.forward = dy < -deadzone;
+      this.inputs.backward = dy > deadzone;
+      this.inputs.left = dx < -deadzone;
+      this.inputs.right = dx > deadzone;
+    };
+
+    const resetStick = () => {
+      stickTouchId = null;
+      stickKnob.style.transform = 'translate(0px, 0px)';
+      this.inputs.forward = false;
+      this.inputs.backward = false;
+      this.inputs.left = false;
+      this.inputs.right = false;
+    };
+
+    stickBase.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      updateBaseCenter();
+      const touch = e.changedTouches[0];
+      stickTouchId = touch.identifier;
+      handleStickMove(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      if (stickTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        const touch = e.changedTouches[i];
+        if (touch.identifier === stickTouchId) {
+          e.preventDefault();
+          handleStickMove(touch.clientX, touch.clientY);
+          break;
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (stickTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === stickTouchId) {
+          resetStick();
+          break;
+        }
+      }
+    });
+
+    window.addEventListener('touchcancel', (e) => {
+      if (stickTouchId === null) return;
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === stickTouchId) {
+          resetStick();
+          break;
+        }
+      }
+    });
+  }
+
+  // 支援手勢調視角（單指滑動環顧視角左右上下、雙指捏合放大縮小視角距離）
+  setupTouchCameraGestures() {
+    let camTouchId = null;
+    let lastCamX = 0;
+    let lastCamY = 0;
+    let lastPinchDist = 0;
+    let isPinching = false;
+
+    window.addEventListener('touchstart', (e) => {
+      // 點擊搖桿、按鈕、地圖或載入畫面時不作為手勢視角
+      if (e.target.closest('#mobile-controls, #hud, #full-map-modal, #loader, button, input')) return;
+
+      if (e.touches.length === 2) {
+        // 雙指手勢：準備縮放視角
+        isPinching = true;
+        camTouchId = null;
+        lastPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      } else if (e.touches.length === 1 && !isPinching) {
+        // 單指手勢：左右上下旋轉視角
+        const touch = e.touches[0];
+        camTouchId = touch.identifier;
+        lastCamX = touch.clientX;
+        lastCamY = touch.clientY;
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+      // 雙指捏合縮放 (Pinch to Zoom)
+      if (e.touches.length === 2) {
+        const curDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        if (lastPinchDist > 0) {
+          const delta = lastPinchDist - curDist;
+          // 縮放視角距離 (3.5m ~ 25m)
+          this.orbitDist = Math.max(3.5, Math.min(25.0, this.orbitDist + delta * 0.038));
+        }
+        lastPinchDist = curDist;
+        this.lastOrbitInteractionTime = performance.now();
+        return;
+      }
+
+      // 單指滑動調整視角左右與上下 (Single Finger Swipe Orbit)
+      if (camTouchId !== null && e.touches.length === 1) {
+        const touch = e.touches[0];
+        if (touch.identifier === camTouchId) {
+          const dx = touch.clientX - lastCamX;
+          const dy = touch.clientY - lastCamY;
+          lastCamX = touch.clientX;
+          lastCamY = touch.clientY;
+
+          this.orbitYaw -= dx * 0.007;
+          this.orbitPitch = Math.max(-0.06, Math.min(1.22, this.orbitPitch + dy * 0.005));
+          this.lastOrbitInteractionTime = performance.now();
+        }
+      }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+        lastPinchDist = 0;
+      }
+      if (e.touches.length === 0) {
+        camTouchId = null;
+      }
+    });
+
+    window.addEventListener('touchcancel', () => {
+      isPinching = false;
+      lastPinchDist = 0;
+      camTouchId = null;
+    });
   }
 
   eatEgg() {
@@ -3960,13 +4205,15 @@ export class TaichungRushApp {
   toggleRadio() {
     const isPlaying = soundManager.toggleRadio();
     const st = soundManager.getCurrentStation();
-    this.showToast(isPlaying ? `📻 車載電台已開啟：${st.name}` : '🔇 車載電台已關閉');
+    const tag = st && st.tag ? `[${st.tag}] ` : '';
+    this.showToast(isPlaying ? `📻 車載電台已開啟：${tag}${st.name}` : '🔇 車載電台已關閉');
   }
 
   nextRadioStation() {
     const st = soundManager.nextStation();
     if (st) {
-      this.showToast(`📻 切換電台頻道：${st.name}`);
+      const tag = st.tag ? `[${st.tag}] ` : '';
+      this.showToast(`📻 切換電台頻道：${tag}${st.name}`);
     }
   }
 
@@ -4601,8 +4848,9 @@ export class TaichungRushApp {
 
           parentGroup.add(innerModel);
 
-          // 放置於真實公尺世界坐標並繞垂直 Y 軸偏轉 (支援 yOffset 微調壓入地表，消弭懸空與地基土堤)
-          parentGroup.position.set(lm.x, (lm.yOffset || 0), lm.z);
+          // 放置於真實公尺世界坐標並繞垂直 Y 軸偏轉 (預設高出地面 yOffset=0.25m 齊平人行道頂部，絕不被路面掩埋！)
+          const targetY = (lm.yOffset != null ? lm.yOffset : 0.25);
+          parentGroup.position.set(lm.x, targetY, lm.z);
           if (lm.rotY) parentGroup.rotation.y = lm.rotY;
 
           this.scene.add(parentGroup);

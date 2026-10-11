@@ -515,7 +515,13 @@ let _cache = null;
 
 export function getFacadeMaterialSets() {
   if (_cache) return _cache;
-  const mk = (map) => new THREE.MeshLambertMaterial({ map, side: THREE.DoubleSide, vertexColors: true });
+  const mk = (map) => new THREE.MeshStandardMaterial({
+    map,
+    roughness: 0.72,
+    metalness: 0.08,
+    side: THREE.DoubleSide,
+    vertexColors: true
+  });
   const shops = [
     shopArcade(0), shopArcade(1), shopArcade(2), shopConvenience(), shopBank(),
     shopEatery(0), shopEatery(1), shopResidential(), shopPharmacy()

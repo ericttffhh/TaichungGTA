@@ -58,13 +58,62 @@ export class SoundSystem {
     this.sirenGain = null;
     this.isSirenPlaying = false;
 
-    // 車載 FM 電台
+    // 車載 FM 電台 (支援真實在線電台串流與高音量合成器)
     this.radioPlaying = false;
     this.radioStationIdx = 0;
+    this.liveAudio = null;
+    this.hlsInstance = null;
     this.radioStations = [
-      { name: 'FM 98.7 臺中搖滾狂飆 (Synthwave Drive)', bpm: 124, scale: [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08] },
-      { name: 'FM 102.5 綠川午夜 Lo-Fi (Night Chill)', bpm: 84, scale: [174.61, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00] },
-      { name: 'FM 89.9 狂飆熱血經典 (Arcade Retro)', bpm: 136, scale: [220.00, 246.94, 261.63, 293.66, 329.63, 349.23, 392.00] }
+      {
+        id: 'pbs_tc',
+        name: '警察廣播電臺 臺中分臺 FM 94.5 (實況路況交通網)',
+        freq: 'FM 94.5',
+        type: 'hls',
+        url: 'https://stream.pbs.gov.tw/live/TCS/playlist.m3u8',
+        tag: '🔴 LIVE 實況'
+      },
+      {
+        id: 'icrt',
+        name: 'ICRT 臺中 FM 100.7 (國際熱門流行音樂網)',
+        freq: 'FM 100.7',
+        type: 'stream',
+        url: 'https://n27a-eu.rcs.revma.com/nkdfurztxp3vv',
+        tag: '🔴 LIVE 實況'
+      },
+      {
+        id: 'classical',
+        name: 'Classical 古典音樂台 FM 97.7 (臺中經典音樂)',
+        freq: 'FM 97.7',
+        type: 'stream',
+        url: 'https://stream.zeno.fm/w66d3dp6ynhvv',
+        tag: '🔴 LIVE 實況'
+      },
+      {
+        id: 'lofi_live',
+        name: '栗子 24/7 舒眠輕音樂 (Lo-Fi Chill Beats)',
+        freq: 'FM 92.0',
+        type: 'stream',
+        url: 'https://lizeradio.com/radio/stream',
+        tag: '🔴 LIVE 實況'
+      },
+      {
+        id: 'synth_rock',
+        name: 'FM 98.7 臺中搖滾狂飆 (Synthwave Drive)',
+        freq: 'FM 98.7',
+        type: 'synth',
+        bpm: 124,
+        scale: [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 233.08],
+        tag: '⚡ SYNTH 電子'
+      },
+      {
+        id: 'chill_synth',
+        name: 'FM 102.5 綠川午夜 Lo-Fi (Night Chill)',
+        freq: 'FM 102.5',
+        type: 'synth',
+        bpm: 84,
+        scale: [174.61, 196.00, 220.00, 261.63, 293.66, 329.63, 392.00],
+        tag: '⚡ SYNTH 電子'
+      }
     ];
     this.radioTimer = null;
     this.radioStep = 0;
@@ -121,9 +170,9 @@ export class SoundSystem {
     this.engineGain.gain.setValueAtTime(0.24, this.ctx.currentTime);
     this.engineGain.connect(this.masterGain);
 
-    // 電台音樂音量
+    // 電台音樂音量 (提升至 0.85 飽滿清晰震撼音量)
     this.radioGain = this.ctx.createGain();
-    this.radioGain.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    this.radioGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
     this.radioGain.connect(this.masterGain);
 
     // 環境底噪
@@ -1063,9 +1112,58 @@ export class SoundSystem {
   }
 
   startRadioTrack() {
-    if (this.radioTimer) clearInterval(this.radioTimer);
+    this.stopRadioTrack();
     const station = this.radioStations[this.radioStationIdx];
-    const intervalMs = (60 / station.bpm) * 1000 * 0.5; // 8分音符步進
+    if (!station) return;
+
+    if (station.url) {
+      if (!this.liveAudio) {
+        this.liveAudio = new Audio();
+        this.liveAudio.crossOrigin = 'anonymous';
+      }
+      this.liveAudio.volume = 1.0;
+
+      if (station.type === 'hls') {
+        if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
+          if (this.hlsInstance) {
+            this.hlsInstance.destroy();
+          }
+          this.hlsInstance = new window.Hls();
+          this.hlsInstance.loadSource(station.url);
+          this.hlsInstance.attachMedia(this.liveAudio);
+          this.hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, () => {
+            this.liveAudio.play().catch(() => this.startProceduralSynth(station));
+          });
+          this.hlsInstance.on(window.Hls.Events.ERROR, (event, data) => {
+            if (data && data.fatal) {
+              console.warn('[Radio] HLS stream error, fallback to synth:', data);
+              this.startProceduralSynth(station);
+            }
+          });
+          return;
+        } else if (this.liveAudio.canPlayType('application/vnd.apple.mpegurl')) {
+          this.liveAudio.src = station.url;
+          this.liveAudio.play().catch(() => this.startProceduralSynth(station));
+          return;
+        }
+      } else {
+        this.liveAudio.src = station.url;
+        this.liveAudio.play().catch(() => this.startProceduralSynth(station));
+        return;
+      }
+    }
+
+    // 預設或合成頻道播放
+    this.startProceduralSynth(station);
+  }
+
+  startProceduralSynth(station) {
+    if (this.radioTimer) clearInterval(this.radioTimer);
+    if (!station || !station.scale) {
+      station = this.radioStations.find(s => s.type === 'synth') || this.radioStations[4];
+    }
+    const bpm = station.bpm || 120;
+    const intervalMs = (60 / bpm) * 1000 * 0.5; // 8分音符步進
 
     this.radioStep = 0;
     this.radioTimer = setInterval(() => {
@@ -1073,7 +1171,7 @@ export class SoundSystem {
       const now = this.ctx.currentTime;
       const step = this.radioStep++;
 
-      // 貝斯底線 (Bassline)
+      // 貝斯底線 (Bassline) - 音量提升至 0.45
       if (step % 2 === 0) {
         const bassNote = station.scale[(step / 2) % station.scale.length] * 0.5;
         const bOsc = this.ctx.createOscillator();
@@ -1082,10 +1180,10 @@ export class SoundSystem {
 
         const bFilter = this.ctx.createBiquadFilter();
         bFilter.type = 'lowpass';
-        bFilter.frequency.setValueAtTime(380, now);
+        bFilter.frequency.setValueAtTime(420, now);
 
         const bGain = this.ctx.createGain();
-        bGain.gain.setValueAtTime(0.18, now);
+        bGain.gain.setValueAtTime(0.45, now);
         bGain.gain.exponentialRampToValueAtTime(0.01, now + (intervalMs / 1000) * 1.8);
 
         bOsc.connect(bFilter);
@@ -1096,7 +1194,7 @@ export class SoundSystem {
         bOsc.stop(now + (intervalMs / 1000) * 1.8);
       }
 
-      // 主旋律合成器 (Melody lead)
+      // 主旋律合成器 (Melody lead) - 音量提升至 0.35
       if (step % 3 === 0 || step % 7 === 0) {
         const melNote = station.scale[(step * 2) % station.scale.length] * 2;
         const mOsc = this.ctx.createOscillator();
@@ -1104,7 +1202,7 @@ export class SoundSystem {
         mOsc.frequency.setValueAtTime(melNote, now);
 
         const mGain = this.ctx.createGain();
-        mGain.gain.setValueAtTime(0.12, now);
+        mGain.gain.setValueAtTime(0.35, now);
         mGain.gain.exponentialRampToValueAtTime(0.001, now + (intervalMs / 1000) * 1.2);
 
         mOsc.connect(mGain);
@@ -1117,6 +1215,15 @@ export class SoundSystem {
   }
 
   stopRadioTrack() {
+    if (this.liveAudio) {
+      this.liveAudio.pause();
+      this.liveAudio.removeAttribute('src');
+      this.liveAudio.load();
+    }
+    if (this.hlsInstance) {
+      this.hlsInstance.destroy();
+      this.hlsInstance = null;
+    }
     if (this.radioTimer) {
       clearInterval(this.radioTimer);
       this.radioTimer = null;

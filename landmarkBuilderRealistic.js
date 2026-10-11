@@ -315,7 +315,7 @@ export class RealisticLandmarks {
       const start = -(n * bay) / 2;
       for (let i = 0; i < n; i++) {
         const cx = start + bay * (i + 0.5);
-        holes.push(archHole(cx - 1.7, cx + 1.7, 0.6, 3.6));       // 一樓騎樓拱圈
+        holes.push(archHole(cx - 1.7, cx + 1.7, 0.05, 3.6));       // 一樓騎樓拱圈自地面 0.05m 開啟，徹底杜絕掩埋感
         holes.push(archHole(cx - 1.0, cx + 1.0, 6.4, 8.9));       // 二樓拱窗
       }
       return holes;
@@ -327,7 +327,7 @@ export class RealisticLandmarks {
       const start = -(n * bay) / 2;
       for (let i = 0; i < n; i++) {
         const cx = start + bay * (i + 0.5);
-        holes.push(archHole(cx - 1.2, cx + 1.2, 1.0, 3.4));
+        holes.push(archHole(cx - 1.2, cx + 1.2, 0.05, 3.4));       // 側向騎樓拱圈自地面開啟
         holes.push(archHole(cx - 1.0, cx + 1.0, 6.4, 8.9));
       }
       return holes;

@@ -3,65 +3,117 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>臺中狂飆 · 去臺中狂飆 · TAICHUNG RUSH</title>
-  <meta name="description" content="《臺中狂飆》去臺中狂飆 — 在瀏覽器裡暢遊開放世界的台中：騎機車穿梭台灣大道、台中火車站、綠川、第二市場與夜市。TAICHUNG RUSH: an open-world Taichung in your browser.">
+  <title>台中大狂飆 · 去台中大狂飆 · TAICHUNG GRAND RUSH</title>
+  <meta name="description" content="《台中大狂飆》去台中大狂飆 — 在瀏覽器裡暢遊開放世界的台中：騎機車穿梭台灣大道、台中火車站、綠川、第二市場與夜市。TAICHUNG GRAND RUSH: an open-world Taichung in your browser.">
   <meta name="theme-color" content="#07080c">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&family=Orbitron:wght@700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Changa+One&family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@600;900&family=Orbitron:wght@700;900&family=Bebas+Neue&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.8/dist/hls.light.min.js"></script>
 </head>
 <body>
   <div id="game-container"></div>
 
   <!-- ========================================================
-       Taipei-Rush 經典載入畫面 (Loader)
+       台中大狂飆 經典載入畫面 (Loader) 與台中地標輪播背景
        ======================================================== -->
   <div id="loader" class="loader-active">
+    <!-- 台中經典地標高解析輪播背景 -->
+    <div class="ld-carousel" id="ld-carousel">
+      <div class="ld-slide active" style="background-image: url('textures/landmarks/bg_station.jpg')" data-title="臺中火車站" data-subtitle="國定古蹟 · 1917 新文藝復興鐘樓紅磚車站"></div>
+      <div class="ld-slide" style="background-image: url('textures/landmarks/bg_theater.jpg')" data-title="臺中國家歌劇院" data-subtitle="世界第九大新地標 · 伊東豊雄美聲曲牆"></div>
+      <div class="ld-slide" style="background-image: url('textures/landmarks/bg_luce.jpg')" data-title="東海大學 路思義教堂" data-subtitle="國定古蹟 · 貝聿銘雙曲面薄殼世紀經典"></div>
+      <div class="ld-slide" style="background-image: url('textures/landmarks/bg_miyahara.jpg')" data-title="宮原眼科 & 綠川水岸" data-subtitle="百年日治紅磚拱圈騎樓 · 臺中浪漫水岸地標"></div>
+      <div class="ld-slide" style="background-image: url('textures/landmarks/bg_park.jpg')" data-title="台中公園 湖心亭" data-subtitle="臺中市徽象徵 · 百年經典雙頂木造水上涼亭"></div>
+    </div>
     <div class="ld-grade"></div>
 
-    <div class="ld-logo">
-      <svg viewBox="0 0 520 220" role="img" aria-label="臺中狂飆 去臺中狂飆">
-        <g font-family="'Noto Sans TC','PingFang TC','Microsoft JhengHei',sans-serif">
-          <rect x="6" y="6" width="112" height="208" rx="6" fill="#d81f2a" stroke="#09090c" stroke-width="7"/>
-          <rect x="16" y="16" width="92" height="188" fill="none" stroke="#fff" stroke-width="2.6" opacity=".92"/>
-          <text x="62" y="100" font-size="76" font-weight="900" fill="#fff" text-anchor="middle">臺</text>
-          <text x="62" y="186" font-size="76" font-weight="900" fill="#fff" text-anchor="middle">中</text>
-          <g font-size="142" font-weight="900" stroke="#09090c" stroke-width="6" paint-order="stroke" transform="skewX(-6)">
-            <text x="156" y="142" fill="#d81f2a">狂飆</text>
-            <text x="150" y="136" fill="#fff">狂飆</text>
-          </g>
-          <rect x="136" y="162" width="250" height="48" fill="#09090c"/>
-          <text x="152" y="197" font-size="28" font-weight="800" fill="#fff" letter-spacing="7">去臺中狂飆</text>
-          <text x="395" y="182" font-size="14" font-weight="800" fill="#ff4b52" letter-spacing="3.2" font-family="'Orbitron','Bebas Neue',sans-serif">TAICHUNG</text>
-          <text x="395" y="200" font-size="14" font-weight="800" fill="#fff" letter-spacing="3.2" font-family="'Orbitron','Bebas Neue',sans-serif">RUSH</text>
-        </g>
-      </svg>
+    <!-- 古典中華青銅金紋四角飾花 (Classical Chinese Corner Fretwork) -->
+    <div class="ld-corner ld-corner-tl">
+      <svg viewBox="0 0 70 70"><path d="M4,4 L66,4 L66,12 L12,12 L12,66 L4,66 Z M18,18 L52,18 L52,24 L24,24 L24,52 L18,52 Z" fill="#d4af37"/></svg>
+    </div>
+    <div class="ld-corner ld-corner-tr">
+      <svg viewBox="0 0 70 70"><path d="M66,4 L4,4 L4,12 L58,12 L58,66 L66,66 Z M52,18 L18,18 L18,24 L46,24 L46,52 L52,52 Z" fill="#d4af37"/></svg>
+    </div>
+    <div class="ld-corner ld-corner-bl">
+      <svg viewBox="0 0 70 70"><path d="M4,66 L66,66 L66,58 L12,58 L12,4 L4,4 Z M18,52 L52,52 L52,46 L24,46 L24,18 L18,18 Z" fill="#d4af37"/></svg>
+    </div>
+    <div class="ld-corner ld-corner-br">
+      <svg viewBox="0 0 70 70"><path d="M66,66 L4,66 L4,58 L58,58 L58,4 L66,4 Z M52,52 L18,52 L18,46 L46,46 L46,18 L52,18 Z" fill="#d4af37"/></svg>
     </div>
 
-    <div class="ld-tip">
-      <div class="ld-tip-k">臺中小知識</div>
+    <!-- 右上角地標輪播古典金漆牌匾 (Landmark Gilded Plaque) -->
+    <div class="ld-carousel-caption" id="ld-carousel-caption">
+      <div class="ld-caption-seal">名勝志</div>
+      <h3 id="ld-caption-title">臺中火車站</h3>
+      <p id="ld-caption-sub">國定古蹟 · 1917 新文藝復興鐘樓紅磚車站</p>
+    </div>
+
+    <!-- 中華古典風華主視覺牌匾 (Taichung Grand Rush Chinese Cultural Brand) -->
+    <div class="ld-chinese-brand">
+      <div class="ld-brand-inner">
+        <!-- 朱印篆刻 (Imperial Cinnabar Seal) -->
+        <div class="ld-seal-stamp">
+          <div class="seal-border">
+            <span class="seal-txt">臺中</span>
+            <span class="seal-sub">中都府</span>
+          </div>
+        </div>
+
+        <div class="ld-brand-titles">
+          <!-- 祥雲回紋冠頂飾帶 -->
+          <div class="ld-filigree-crown">
+            <span class="crown-line"></span>
+            <span class="crown-text">✦ 中 都 風 華 · 馳 騁 狂 飆 ✦</span>
+            <span class="crown-line"></span>
+          </div>
+
+          <!-- 鎏金書法大標題 -->
+          <h1 class="ld-chinese-title">臺中大狂飆</h1>
+
+          <!-- 祥雲金帶與英文標記 -->
+          <div class="ld-badge-group">
+            <span class="ld-pill-badge">疾 速 狂 飆</span>
+            <span class="ld-en-badge">TAICHUNG GRAND RUSH</span>
+          </div>
+          <p class="ld-desc-text">台灣大道 · 穿梭市井 · 百年古蹟 · 開放世界</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 典雅卷軸風格臺中小錦囊 -->
+    <div class="ld-tip ld-tip-chinese">
+      <div class="ld-tip-k">
+        <span class="seal-mini">采風</span>
+        <span>中都風華 · 臺中小錦囊</span>
+      </div>
       <div class="ld-tips" id="ld-tips-text">載入中...</div>
     </div>
 
-    <div class="ld-prog">
+    <!-- 回字紋飾邊金絲進度條 -->
+    <div class="ld-prog ld-prog-chinese">
       <div class="ld-row">
-        <div class="ld-spin"></div>
+        <div class="ld-spin-chinese"></div>
         <div class="ld-stage">
           <b id="ld-stage">鋪設街道</b>
           <small id="ld-stage-en">Laying the streets</small>
         </div>
         <div class="ld-pct" id="ld-pct">0<i>%</i></div>
       </div>
-      <div class="ld-track">
+      <div class="ld-track ld-track-fret">
         <div class="ld-fill" id="ld-fill"></div>
         <div class="ld-sweep"></div>
       </div>
     </div>
 
+    <!-- 啟程金印牌匾按鈕 -->
     <div class="ld-ready-box hidden" id="ld-ready-box">
-      <button id="btn-enter-game" class="btn-rush-start">騎上機車，去臺中狂飆！</button>
-      <div class="ld-key-hints">
+      <button id="btn-enter-game" class="btn-rush-start btn-start-chinese">
+        <span class="btn-seal">啟</span>
+        <span class="btn-label">啟程狂飆 · 馳騁台中</span>
+      </button>
+      <div class="ld-key-hints ld-key-hints-chinese">
         <span>🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 駕駛</span>
         <span>🛵 <kbd>F</kbd> 切換機車/超跑</span>
         <span>🗺️ <kbd>M</kbd> 全屏 GPS 大地圖</span>
@@ -163,6 +215,76 @@
       <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> 載具</button>
       <button class="helper-btn btn-act-eat" id="btn-eat"><kbd>E</kbd> 補血</button>
       <button class="helper-btn btn-act-reset" id="btn-reset"><kbd>R</kbd> 翻正</button>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       手機版觸控游標搖桿與操作按鈕系統 (Mobile Touch Controls)
+       ======================================================== -->
+  <div id="mobile-controls" class="mobile-controls-layer">
+    <!-- 左側：虛擬游標搖桿 (Virtual Analog Cursor Joystick) -->
+    <div class="mobile-stick-zone" id="mobile-stick-zone">
+      <div class="touch-joystick-base" id="joystick-base">
+        <div class="joystick-ring"></div>
+        <div class="joystick-guide-arrow arrow-up">▲</div>
+        <div class="joystick-guide-arrow arrow-down">▼</div>
+        <div class="joystick-guide-arrow arrow-left">◀</div>
+        <div class="joystick-guide-arrow arrow-right">▶</div>
+        <div class="touch-joystick-knob" id="joystick-knob">
+          <div class="knob-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右側：手機快捷操作與油門煞車輪盤 (Mobile Action Buttons) -->
+    <div class="mobile-actions-zone" id="mobile-actions-zone">
+      <!-- 頂端次要操作按鈕 -->
+      <div class="mobile-sub-row">
+        <button id="btn-m-map" class="btn-m-pill" aria-label="全屏地圖">
+          <span class="m-icon">🗺️</span>
+          <span class="m-lbl">地圖</span>
+        </button>
+        <button id="btn-m-radio" class="btn-m-pill" aria-label="車載電台">
+          <span class="m-icon">📻</span>
+          <span class="m-lbl">電台</span>
+        </button>
+        <button id="btn-m-reset" class="btn-m-pill" aria-label="車輛翻正">
+          <span class="m-icon">🔄</span>
+          <span class="m-lbl">翻正</span>
+        </button>
+      </div>
+
+      <!-- 核心互動按鈕排 -->
+      <div class="mobile-grid-row">
+        <button id="btn-m-swap" class="btn-m-circle btn-m-cyan" aria-label="切換載具">
+          <span class="m-circle-icon">🛵</span>
+          <span class="m-circle-txt">換車</span>
+        </button>
+        <button id="btn-m-heal" class="btn-m-circle btn-m-green" aria-label="吃蛋補血">
+          <span class="m-circle-icon">🥚</span>
+          <span class="m-circle-txt">補血</span>
+        </button>
+        <button id="btn-m-horn" class="btn-m-circle btn-m-yellow" aria-label="鳴按喇叭">
+          <span class="m-circle-icon">📢</span>
+          <span class="m-circle-txt">喇叭</span>
+        </button>
+        <button id="btn-m-shoot" class="btn-m-circle btn-m-orange" aria-label="開槍射擊">
+          <span class="m-circle-icon">🔫</span>
+          <span class="m-circle-txt">開槍</span>
+        </button>
+      </div>
+
+      <!-- 核心煞車/油門大按鈕 -->
+      <div class="mobile-drive-row">
+        <button id="btn-m-brake" class="btn-m-pedal btn-m-pedal-brake" aria-label="煞車倒車">
+          <span class="m-pedal-icon">🛑</span>
+          <span class="m-pedal-txt">煞車</span>
+        </button>
+        <button id="btn-m-gas" class="btn-m-pedal btn-m-pedal-gas" aria-label="油門加速">
+          <span class="m-pedal-icon">⚡</span>
+          <span class="m-pedal-txt">油門</span>
+        </button>
+      </div>
     </div>
   </div>
 
