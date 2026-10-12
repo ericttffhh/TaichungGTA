@@ -3072,9 +3072,29 @@ class TrafficSystem {
         v.group.position.set(curX, 0.08, curZ);
         v.group.rotation.y = Math.atan2(dx, dz);
 
-        // 與玩家防碰撞避讓：若距玩家太近自動減速
+        // 與玩家防碰撞避讓與事故追撞判定
         if (playerPos) {
           const distToPlayer = Math.hypot(curX - playerPos.x, curZ - playerPos.z);
+          const collisionDist = v.type === 'scooter' ? 1.8 : 2.5;
+
+          // 玩家高速衝撞 AI 車輛
+          if (distToPlayer < collisionDist) {
+            const playerSpeed = playerVehicle?.speed || 0;
+            if (playerSpeed > 22 && (!v.lastHitTime || performance.now() - v.lastHitTime > 2500)) {
+              v.lastHitTime = performance.now();
+              if (window.soundManager) window.soundManager.playCrash(0.85);
+              if (window.taichungApp?.gtaManager) {
+                if (v.type === 'police') {
+                  window.taichungApp.gtaManager.addWanted(2);
+                  window.taichungApp.showToast('🚨 衝撞臺中市警巡邏車！通緝提升至 2 星！');
+                } else {
+                  window.taichungApp.gtaManager.addWanted(1);
+                  window.taichungApp.showToast('💥 街頭高速追撞交通事故！臺中警方出動！');
+                }
+              }
+            }
+          }
+
           if (distToPlayer > 180) {
             // 太遠時重新生成於玩家前方路段，確保繁華車流環繞
             v.roadIdx = (v.roadIdx + 3) % this.roadSegments.length;
@@ -3339,14 +3359,27 @@ class PedestrianSystem {
 
             // GTA 通緝系統：通緝星級提升！警方全面圍捕！
             if (this.app?.gtaManager) {
-              const starsToAdd = carSpeedKmh > 55 ? 2 : 1;
+              const starsToAdd = p.isPolice ? 3 : (carSpeedKmh > 55 ? 2 : 1);
               this.app.gtaManager.addWanted(starsToAdd);
               this.app.gtaManager.addCash(-500); // 扣除肇事賠償金
             }
             if (this.app) {
-              this.app.showToast("💥 肇事撞擊行人！臺中市警察局全面發布通緝！");
+              this.app.showToast(p.isPolice ? "🚨 衝撞襲擊執勤員警！臺中市警察局全面發布 3 星圍捕！" : "💥 肇事撞擊行人！臺中市警察局全面發布通緝！");
             }
             continue;
+          }
+
+          // 執勤警察徒步逮捕機制：通緝中且玩家停在員警身旁時實施逮捕
+          if (p.isPolice && this.app?.gtaManager?.wantedStars > 0) {
+            if (distToCar < 3.2 && carSpeedKmh < 12) {
+              p.arrestTimer = (p.arrestTimer || 0) + dt;
+              if (p.arrestTimer > 1.6) {
+                p.arrestTimer = 0;
+                this.app.gtaManager.triggerBusted();
+              }
+            } else {
+              p.arrestTimer = 0;
+            }
           }
 
           // 太遠時 (超過 150m) 重新分派到玩家身旁人行道，確保身邊總是充滿行人
@@ -3845,6 +3878,10 @@ export class TaichungRushApp {
 
       if (state && (code === 'KeyM' || key === 'm' || key === 'M')) {
         this.mapSystem.toggle();
+      }
+
+      if (state && (code === 'KeyP' || key === 'p' || key === 'P')) {
+        this.gtaManager?.addWanted(1);
       }
     };
 

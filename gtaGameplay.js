@@ -214,15 +214,16 @@ export class GtaAudioSynth {
 // 2. 臺中市警察局 巡邏警車 AI 追擊實體 (PoliceCruiserAI)
 // ============================================================================
 class PoliceCruiserAI {
-  constructor(scene, spawnX, spawnZ) {
+  constructor(scene, spawnX, spawnZ, maxSpeed = 26) {
     this.scene = scene;
     this.position = new THREE.Vector3(spawnX, 0.4, spawnZ);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.yaw = 0;
     this.speed = 0;
-    this.maxSpeed = 26; // 約 94 km/h
+    this.maxSpeed = maxSpeed;
     this.health = 100;
     this.isDead = false;
+    this.arrestTimer = 0;
 
     this.meshGroup = new THREE.Group();
     this.buildModel();
@@ -783,8 +784,56 @@ export class GtaGameplayManager {
   addWanted(stars = 1) {
     this.wantedStars = Math.min(5, this.wantedStars + stars);
     this.wantedCooldown = 12.0;
+    this.policeSpawnCooldown = 0; // 重設冷卻，警網立即調派巡邏車！
     this.updateWantedUI();
-    this.app.showToast(`🚨 通緝星級上升至 ${this.wantedStars} 星！警網全面攔截！`);
+    soundManager.setPoliceSiren(true);
+    this.app.showToast(`🚨 通緝星級上升至 ${this.wantedStars} 星！警網全面出動追捕！`);
+  }
+
+  // ★ 遭警方逮捕 (BUSTED) 系統
+  triggerBusted() {
+    if (this.isBusted) return;
+    this.isBusted = true;
+
+    soundManager.playCrash(1.0);
+
+    const bustedEl = document.getElementById('busted-overlay');
+    if (bustedEl) {
+      bustedEl.classList.remove('hidden');
+      bustedEl.classList.add('active');
+    }
+
+    // 扣除交保與罰金
+    const fine = Math.min(this.cash, Math.max(1500, Math.round(this.cash * 0.04) + this.wantedStars * 800));
+    this.cash = Math.max(0, this.cash - fine);
+    this.updateCashUI();
+
+    // 消除通緝與警車
+    this.clearWanted();
+    this.policeCruisers.forEach((p) => p.dispose());
+    this.policeCruisers = [];
+    soundManager.setPoliceSiren(false);
+
+    this.app.showToast(`👮 遭到臺中市政府警察局逮捕拘提 (BUSTED)！裁處交保罰金 -${fine.toLocaleString()}`);
+
+    setTimeout(() => {
+      if (bustedEl) {
+        bustedEl.classList.remove('active');
+        bustedEl.classList.add('hidden');
+      }
+      this.isBusted = false;
+
+      // 移送獲釋：在臺中市警一分局 (民權路/三民路口) 安全釋放
+      if (this.app.playerMode === 'onfoot') {
+        this.app.character.setPosition(-140, 1.2, 142, 0);
+      } else {
+        this.app.teleportToCoords(-140, 142, '臺中市政府警察局第一分局');
+        if (this.app.vehicle) this.app.vehicle.health = 100;
+        const hpBar = document.getElementById('health-bar');
+        if (hpBar) hpBar.style.width = '100%';
+      }
+      this.app.showToast('🕊️ 已交保獲釋，車輛已修復完成，請遵守交通法規！');
+    }, 2800);
   }
 
   // 完全消除通緝
@@ -1153,49 +1202,99 @@ export class GtaGameplayManager {
     // 3. 清理已陣亡或已徹底跟丟的警車
     this.policeCruisers = this.policeCruisers.filter(c => !c.isDead);
 
-    // 計算最近的警車距離
     const activeCops = this.policeCruisers.filter(c => !c.isDead);
     const nearestCopDist = activeCops.length > 0
       ? activeCops.reduce((min, c) => Math.min(min, c.position.distanceTo(playerPos)), Infinity)
       : Infinity;
 
-    // 4. 警車生成邏輯：只有在玩家被緊咬 (距離 < 65m) 且通緝中時才謹慎增援，玩家正在甩開時禁止生車作弊！
-    const isEvading = nearestCopDist > 65;
-    const desiredCops = Math.min(2, this.wantedStars);
+    // 只有在【現場確實有警車】且【最近警車距離大於 65 米】時，才算正在甩開警方！
+    const isEvading = activeCops.length > 0 && nearestCopDist > 65;
+
+    // 目標警車數量 (1星: 1輛, 2星: 2輛, 3星: 3輛, 4-5星: 4輛)
+    const desiredCops = Math.min(4, Math.max(1, this.wantedStars));
     this.policeSpawnCooldown -= dt;
 
-    if (!isEvading && this.policeCruisers.length < desiredCops && this.policeSpawnCooldown <= 0) {
-      this.policeSpawnCooldown = 8.0; // 延長冷卻為 8 秒，給玩家充足逃脫空檔
-      const angle = (this.app.vehicle?.currentYaw || 0) + Math.PI + (Math.random() - 0.5) * 0.8;
-      const spawnX = playerPos.x + Math.sin(angle) * 75;
-      const spawnZ = playerPos.z + Math.cos(angle) * 75;
+    const playerSpeed = this.app.playerMode === 'vehicle'
+      ? (this.app.vehicle?.speed || 0)
+      : (this.app.character?.speed || 0);
 
-      const newCop = new PoliceCruiserAI(this.app.scene, spawnX, spawnZ);
-      this.policeCruisers.push(newCop);
+    // 4. 警車生成邏輯：通緝中且警車未滿編
+    if (this.wantedStars > 0 && this.policeCruisers.length < desiredCops && !this.isBusted) {
+      // 若現場無警車立即出動；現場已有警車時若未被甩開且冷卻完畢則調派增援
+      const shouldSpawn = activeCops.length === 0 || (!isEvading && this.policeSpawnCooldown <= 0);
+      if (shouldSpawn) {
+        this.policeSpawnCooldown = activeCops.length === 0 ? 0.6 : 6.5;
+
+        const playerYaw = this.app.playerMode === 'vehicle'
+          ? (this.app.vehicle?.currentYaw || 0)
+          : (this.app.character?.yaw || 0);
+
+        // 前方攔截 (60m) 或後方追擊 (-52m)
+        const spawnAhead = Math.random() < 0.4 && activeCops.length > 0;
+        const spawnDist = spawnAhead ? 60 : -52;
+        const rawX = playerPos.x + Math.sin(playerYaw) * spawnDist + (Math.random() - 0.5) * 14;
+        const rawZ = playerPos.z + Math.cos(playerYaw) * spawnDist + (Math.random() - 0.5) * 14;
+
+        const roadPt = this.app.findNearestRoadPoint
+          ? this.app.findNearestRoadPoint(rawX, rawZ, 120)
+          : { x: rawX, z: rawZ, angle: playerYaw };
+
+        const copSpeed = 23 + Math.min(8, this.wantedStars * 2);
+        const newCop = new PoliceCruiserAI(this.app.scene, roadPt.x, roadPt.z, copSpeed);
+        newCop.yaw = Math.atan2(playerPos.x - roadPt.x, playerPos.z - roadPt.z);
+        this.policeCruisers.push(newCop);
+
+        soundManager.setPoliceSiren(true);
+        if (activeCops.length === 0) {
+          this.app.showToast(`🚨 臺中市警局巡邏網出動！${this.wantedStars} 星警車展開包抄攔截！`);
+        }
+      }
+    }
+
+    if (this.wantedStars === 0 || this.policeCruisers.length === 0) {
+      if (!this.isSirenActive) {
+        soundManager.setPoliceSiren(false);
+      }
     }
 
     // 5. 更新所有追逐警車 AI
+    let maxArrestTimer = 0;
     for (let i = this.policeCruisers.length - 1; i >= 0; i--) {
       const cop = this.policeCruisers[i];
       if (cop.isDead) continue;
 
-      cop.update(dt, playerPos, this.app.vehicle?.body?.velocity || new THREE.Vector3(), () => {
-        this.audio.playCrash();
-        const armorReduction = this.upgrades.armor * 2;
-        const dmg = Math.max(3, 8 - armorReduction);
-        this.app.vehicle.health = Math.max(0, (this.app.vehicle.health || 100) - dmg);
-        const hpBar = document.getElementById('health-bar');
-        if (hpBar) hpBar.style.width = `${this.app.vehicle.health}%`;
-        this.app.showToast('💥 遭到臺中警車 PIT 包抄撞擊！HP 受到損耗');
+      cop.update(
+        dt,
+        playerPos,
+        this.app.vehicle?.body?.velocity || new THREE.Vector3(),
+        () => {
+          this.audio.playCrash();
+          const armorReduction = this.upgrades.armor * 2;
+          const dmg = Math.max(3, 8 - armorReduction);
+          this.app.vehicle.health = Math.max(0, (this.app.vehicle.health || 100) - dmg);
+          const hpBar = document.getElementById('health-bar');
+          if (hpBar) hpBar.style.width = `${this.app.vehicle.health}%`;
+          this.app.showToast('💥 遭到臺中警車 PIT 包抄撞擊！');
 
-        if (this.app.vehicle.health <= 0) {
-          this.app.showToast('💀 車輛徹底毀損！已原地緊急吊掛維修');
-          this.app.vehicle.resetPosition();
-          this.app.vehicle.health = 100;
-          if (hpBar) hpBar.style.width = '100%';
-          this.clearWanted();
-        }
-      });
+          if (this.app.vehicle.health <= 0) {
+            this.triggerBusted();
+          }
+        },
+        () => {
+          this.triggerBusted();
+        },
+        playerSpeed
+      );
+
+      if (cop.arrestTimer > maxArrestTimer) {
+        maxArrestTimer = cop.arrestTimer;
+      }
+    }
+
+    // 逮捕壓制倒數提示
+    if (maxArrestTimer > 0.4 && !this.isBusted) {
+      const pct = Math.min(100, Math.round((maxArrestTimer / 1.8) * 100));
+      this.app.showToast(`⚠️ 遭警方貼身包圍壓制！立即突圍加速！(逮捕倒數 ${pct}%)`);
     }
 
     // 6. ★ GTA 經典甩開警方機制 (Evade & Lose Cops)

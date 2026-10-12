@@ -2573,3 +2573,76 @@ body.touch-device .hud-controls-helper {
   transform: none;
   box-shadow: none;
 }
+
+/* =========================================================
+   GTA 經典逮捕畫面 (BUSTED SCREEN OVERLAY)
+========================================================= */
+.busted-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(circle at center, rgba(30, 10, 10, 0.88), rgba(6, 8, 14, 0.96));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.busted-screen.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.busted-banner {
+  text-align: center;
+  animation: bustedZoom 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes bustedZoom {
+  0% { transform: scale(0.65); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.busted-seal {
+  display: inline-block;
+  background: #b71c1c;
+  color: #ffd700;
+  border: 1.5px solid #ffd700;
+  padding: 4px 14px;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  margin-bottom: 14px;
+  box-shadow: 0 0 16px rgba(183, 28, 28, 0.6);
+}
+
+.busted-title {
+  font-size: clamp(60px, 11vw, 120px);
+  font-weight: 900;
+  color: #ff2233;
+  letter-spacing: 12px;
+  margin: 0;
+  text-shadow: 0 0 45px rgba(255, 34, 51, 0.85), 0 4px 16px #000;
+  font-family: 'Montserrat', 'Impact', sans-serif;
+}
+
+.busted-subtitle {
+  font-size: clamp(18px, 2.4vw, 30px);
+  color: #ffd700;
+  letter-spacing: 6px;
+  margin: 10px 0 14px;
+  font-family: 'Noto Serif TC', serif;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9);
+}
+
+.busted-desc {
+  font-size: clamp(12px, 1vw, 15px);
+  color: rgba(240, 240, 240, 0.75);
+  letter-spacing: 2px;
+  margin: 0;
+}
