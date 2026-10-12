@@ -3483,34 +3483,91 @@ export class TaichungRushApp {
   }
 
 
-  // 啟動載入畫面台中地標輪播輪替 (每 4.5 秒自動淡入淡出並更新地標名稱)
+  // 啟動載入畫面台中地標輪播輪替與【中都風華 · 臺中小錦囊】小知識輪播
   initLoaderCarousel() {
+    // 1. 背景地標大圖輪播
     const slides = document.querySelectorAll('#ld-carousel .ld-slide');
     const capTitle = document.getElementById('ld-caption-title');
     const capSub = document.getElementById('ld-caption-sub');
-    if (!slides || slides.length === 0) return;
+    if (slides && slides.length > 0) {
+      let currentIdx = 0;
+      slides.forEach((s, idx) => {
+        if (idx === 0) s.classList.add('active');
+        else s.classList.remove('active');
+      });
+      this.carouselTimer = setInterval(() => {
+        if (this.loader && this.loader.classList.contains('hidden')) {
+          clearInterval(this.carouselTimer);
+          return;
+        }
+        slides[currentIdx].classList.remove('active');
+        currentIdx = (currentIdx + 1) % slides.length;
+        slides[currentIdx].classList.add('active');
 
-    let currentIdx = 0;
-    slides.forEach((s, idx) => {
-      if (idx === 0) s.classList.add('active');
-      else s.classList.remove('active');
-    });
-    this.carouselTimer = setInterval(() => {
-      if (this.loader && this.loader.classList.contains('hidden')) {
-        clearInterval(this.carouselTimer);
-        return;
-      }
-      slides[currentIdx].classList.remove('active');
-      currentIdx = (currentIdx + 1) % slides.length;
-      slides[currentIdx].classList.add('active');
+        if (capTitle && slides[currentIdx].dataset.title) {
+          capTitle.textContent = slides[currentIdx].dataset.title;
+        }
+        if (capSub && slides[currentIdx].dataset.subtitle) {
+          capSub.textContent = slides[currentIdx].dataset.subtitle;
+        }
+      }, 8000); // 8 秒切換一張 循環
+    }
 
-      if (capTitle && slides[currentIdx].dataset.title) {
-        capTitle.textContent = slides[currentIdx].dataset.title;
+    // 2. 【中都風華 · 臺中小錦囊】文化采風與遊玩密技動態輪播
+    const tipTextEl = document.getElementById('ld-tips-text');
+    const tipBoxEl = document.getElementById('ld-tip-box');
+    const taichungTips = [
+      '🏛️ <b>百年臺中車站</b>：新站高架穹頂融合舊站國定古蹟紅磚鐘塔，是全台唯一的「三代同堂」鐵道文化聚落。',
+      '🥫 <b>東泉辣椒醬</b>：臺中人的靈魂血脈！大麵羹、炒麵、水煎包都要淋上一圈，甜辣甘鹹的在地滋味。',
+      '🚗 <b>甩開警車追緝</b>：被警方通緝時全力衝刺保持 <b>65 公尺</b>以上視線距離或鑽入巷弄，持續 5.5 秒即可消除通緝並獲 $2,500 逃脫賞金！',
+      '🍦 <b>宮原眼科</b>：日治時期眼科診所華麗變身！除了排隊冰淇淋，店內霍格華茲風挑高書牆與日出乳酪蛋糕亦是朝聖熱點。',
+      '🔧 <b>地下車輛改裝廠</b>：按鍵盤 <b>[U]</b> 或點擊齒輪按鈕即可進入改裝廠，升級 NOS 氮氣加速、防彈裝甲與車載衝鋒槍！',
+      '🧋 <b>珍珠奶茶發源地</b>：春水堂人文茶館於 1980 年代在臺中四維街開創冷飲茶與粉圓結合的傳奇，風靡全世界。',
+      '🚕 <b>計程車載客接單</b>：駕駛黃色小黃計程車，或點擊介面「差事」按鈕承接載客任務，將乘客平安送達賺取豐厚車資！',
+      '🛵 <b>外送小哥穿梭</b>：騎乘經典三陽機車穿梭逢甲、一中街巷弄，接單送蛋黃酥與太陽餅，體驗最接臺中地氣的街頭打工！',
+      '💎 <b>城市彩蛋收集</b>：臺中各地隱藏了 8 處金光閃爍的文化寶藏（綠川、柳川、第二市場等），收集滿額即可解鎖高達 $100,000 大獎！',
+      '🎭 <b>臺中國家歌劇院</b>：世界第九大新地標，由伊東豊雄大師設計的「美聲涵洞」無樑柱曲牆建築，夜晚伴隨噴泉光影格外迷人。',
+      '🌞 <b>自由路太陽餅街</b>：百年製餅工藝的發源地，酥皮層層疊疊、麥芽香甜濃郁，是老臺中人最驕傲的伴手禮。',
+      '📻 <b>車載在地廣播</b>：按下 <b>[N]</b> 鍵開啟車載音響、<b>[B]</b> 鍵快速切換電台頻道，行駛時聆聽在地節奏最愜意。',
+      '🚶 <b>徒步模式探索</b>：按下 <b>[F]</b> 鍵隨時上下車切換人物走路模式，自由漫步綠川水岸與紅磚舊站月台。',
+      '🌇 <b>黃金夕陽光影</b>：按下 <b>[L]</b> 鍵或點擊 HUD 上方時鐘，隨時在【晴朗白晝】、【黃金夕陽】與【璀璨夜城】間切換視覺風格。',
+      '🥚 <b>東泉荷包蛋補血</b>：血量過低時點擊 <b>[E]</b> 鍵享用淋滿東泉辣椒醬的荷包蛋，瞬間回滿 35 點生命值！',
+      '⚡ <b>測速照相注意</b>：臺灣大道與五權路設有多處測速照相機，超速衝過會被強光閃拍！'
+    ];
+
+    if (tipTextEl) {
+      let tipIdx = 0;
+      tipTextEl.innerHTML = taichungTips[tipIdx];
+
+      const showNextTip = () => {
+        tipTextEl.classList.add('fade-out');
+        setTimeout(() => {
+          tipIdx = (tipIdx + 1) % taichungTips.length;
+          tipTextEl.innerHTML = taichungTips[tipIdx];
+          tipTextEl.classList.remove('fade-out');
+        }, 220);
+      };
+
+      const startTipInterval = () => {
+        if (this.tipTimer) clearInterval(this.tipTimer);
+        this.tipTimer = setInterval(() => {
+          if (this.loader && this.loader.classList.contains('hidden')) {
+            clearInterval(this.tipTimer);
+            return;
+          }
+          showNextTip();
+        }, 3800);
+      };
+
+      startTipInterval();
+
+      if (tipBoxEl) {
+        tipBoxEl.addEventListener('click', () => {
+          showNextTip();
+          startTipInterval();
+        });
       }
-      if (capSub && slides[currentIdx].dataset.subtitle) {
-        capSub.textContent = slides[currentIdx].dataset.subtitle;
-      }
-    }, 8000); // 8 秒切換一張 循環
+    }
   }
 
   // 提示框
@@ -3822,6 +3879,7 @@ export class TaichungRushApp {
     if (this.btnEnterGame) {
       this.btnEnterGame.addEventListener('click', () => {
         if (this.carouselTimer) clearInterval(this.carouselTimer);
+        if (this.tipTimer) clearInterval(this.tipTimer);
         this.loader.classList.remove('loader-active');
         this.loader.classList.add('hidden');
         if (this.hudLayer) this.hudLayer.classList.remove('hidden');
