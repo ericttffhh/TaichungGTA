@@ -15,6 +15,7 @@ import { LandmarkBuilder } from './landmarkBuilder.js';
 import { soundManager } from './soundSystem.js';
 import { TaiwanTrafficSignalSystem, TaiwanStreetscapeTextures } from './taiwanStreetscape.js';
 import { PlayerCharacter } from './playerCharacter.js';
+import { buildTaxi, buildPoliceCar, buildSupercar, createWheel } from './vehicleModels.js';
 
 window.THREE = THREE;
 window.CANNON = CANNON;
@@ -1805,19 +1806,34 @@ class Vehicle {
       const rimMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.4, metalness: 0.7 });
       const discMat = new THREE.MeshStandardMaterial({ color: 0xbdc3c7, roughness: 0.2, metalness: 0.9 });
 
-      const buildScooterWheel = (isFront) => {
-        const wg = new THREE.Group();
-        const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.15, 18), tireMat);
-        tire.rotation.z = Math.PI / 2;
-        wg.add(tire);
-        const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.16, 12), rimMat);
-        rim.rotation.z = Math.PI / 2;
-        wg.add(rim);
-        const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.17, 12), discMat);
-        disc.rotation.z = Math.PI / 2;
-        wg.add(disc);
-        return wg;
-      };
+      const buildScooterWheel = (isFront) => createWheel(0.28, 0.14, { spokes: 6, dark: true, caliperColor: 0xd35400, brake: isFront });
+
+      // 前叉與前後擋泥板
+      [-0.1, 0.1].forEach((fx) => {
+        const fork = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, 0.62, 10), chromeMat);
+        fork.position.set(fx, 0.6, 0.8);
+        fork.rotation.x = 0.28;
+        this.meshGroup.add(fork);
+      });
+      const fenderGeom = new THREE.CylinderGeometry(0.31, 0.31, 0.17, 20, 1, true, -Math.PI * 0.45, Math.PI * 0.9);
+      fenderGeom.rotateZ(Math.PI / 2);
+      fenderGeom.rotateX(-Math.PI / 2);
+      const fenderMat = paintMat.clone();
+      fenderMat.side = THREE.DoubleSide;
+      const frontFender = new THREE.Mesh(fenderGeom, fenderMat);
+      frontFender.position.set(0, 0.28, 0.78);
+      this.meshGroup.add(frontFender);
+      const rearFender = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.025, 0.4), paintMat);
+      rearFender.position.set(0, 0.52, -0.92);
+      rearFender.rotation.x = -0.4;
+      this.meshGroup.add(rearFender);
+      // 後避震彈簧
+      [-0.17, 0.17].forEach((sx) => {
+        const shock = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.42, 8), new THREE.MeshStandardMaterial({ color: 0xe67e22, roughness: 0.4, metalness: 0.6 }));
+        shock.position.set(sx, 0.42, -0.6);
+        shock.rotation.x = 0.7;
+        this.meshGroup.add(shock);
+      });
 
       const fWheel = buildScooterWheel(true);
       fWheel.position.set(0, 0.28, 0.78);
@@ -1829,161 +1845,12 @@ class Vehicle {
 
       // 7. ★ 高精細台灣潮流騎士 (Detailed Taiwanese Streetwear Rider on Scooter)
       const riderGroup = PlayerCharacter.createDetailedRiderMesh();
-      riderGroup.position.set(0, 0.42, -0.15);
+      riderGroup.position.set(0, 0.42, -0.05);
       this.meshGroup.add(riderGroup);
-    } else if (this.type === 'taxi') {
-      // ★ 臺中經典小黃計程車 (Toyota Altis/Wish 造型 + 車頂 TAXI 燈箱 + 門側方格拉條 + 營業車牌)
-      const yellowPaint = new THREE.MeshStandardMaterial({ color: 0xfbc02d, roughness: 0.25, metalness: 0.35 });
-      const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a2634, roughness: 0.1, metalness: 0.8 });
-      const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdcdde1, roughness: 0.2, metalness: 0.9 });
-
-      // 車身底盤
-      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.5, 3.8), yellowPaint);
-      chassis.position.y = 0.38;
-      this.meshGroup.add(chassis);
-
-      // 車頂座艙與車窗
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.52, 2.0), glassMat);
-      cabin.position.set(0, 0.82, -0.15);
-      this.meshGroup.add(cabin);
-
-      // 車側黑白相間計程車棋盤格條紋
-      const stripeCanvas = document.createElement('canvas');
-      stripeCanvas.width = 256; stripeCanvas.height = 32;
-      const sCtx = stripeCanvas.getContext('2d');
-      sCtx.fillStyle = '#fbc02d'; sCtx.fillRect(0, 0, 256, 32);
-      for (let x = 0; x < 256; x += 16) {
-        sCtx.fillStyle = (x / 16) % 2 === 0 ? '#111111' : '#ffffff';
-        sCtx.fillRect(x, 8, 16, 16);
-      }
-      const stripeTex = new THREE.CanvasTexture(stripeCanvas);
-      const stripeMat = new THREE.MeshBasicMaterial({ map: stripeTex });
-
-      [-0.9, 0.9].forEach((dx) => {
-        const sideStripe = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.12, 2.2), stripeMat);
-        sideStripe.position.set(dx, 0.52, -0.1);
-        this.meshGroup.add(sideStripe);
-
-        // 後視鏡
-        const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.16), yellowPaint);
-        mirror.position.set(dx * 0.96, 0.78, 0.75);
-        this.meshGroup.add(mirror);
-      });
-
-      // 車頂發光 TAXI 燈箱 (TAXI · 個人 · 臺中)
-      const taxiSignCanvas = document.createElement('canvas');
-      taxiSignCanvas.width = 256; taxiSignCanvas.height = 96;
-      const tCtx = taxiSignCanvas.getContext('2d');
-      tCtx.fillStyle = '#ffffff'; tCtx.fillRect(0, 0, 256, 96);
-      tCtx.fillStyle = '#d32f2f'; tCtx.font = 'bold 36px sans-serif';
-      tCtx.textAlign = 'center'; tCtx.fillText('TAXI', 128, 44);
-      tCtx.fillStyle = '#1976d2'; tCtx.font = 'bold 20px "Noto Sans TC", sans-serif';
-      tCtx.fillText('個人 · 臺中', 128, 80);
-      const signTex = new THREE.CanvasTexture(taxiSignCanvas);
-
-      const taxiSign = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.18, 0.26), new THREE.MeshBasicMaterial({ map: signTex }));
-      taxiSign.position.set(0, 1.15, -0.15);
-      this.meshGroup.add(taxiSign);
-
-      // 車頭水箱護罩鍍鉻飾條與大燈
-      const grille = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.16, 0.04), chromeMat);
-      grille.position.set(0, 0.42, 1.91);
-      this.meshGroup.add(grille);
-
-      [-0.65, 0.65].forEach((hx) => {
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.12, 0.04), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-        head.position.set(hx, 0.45, 1.91);
-        this.meshGroup.add(head);
-
-        const tail = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.12, 0.04), new THREE.MeshBasicMaterial({ color: 0xff1744 }));
-        tail.position.set(hx, 0.52, -1.91);
-        this.meshGroup.add(tail);
-      });
-
-      // 紅色營業車牌 (TDC-1688)
-      const redPlate = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.02), new THREE.MeshStandardMaterial({ color: 0xc0392b }));
-      redPlate.position.set(0, 0.28, 1.92);
-      this.meshGroup.add(redPlate);
-
-      // 4 個輪胎與鋁圈
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-      const wheelGeom = new THREE.CylinderGeometry(0.36, 0.36, 0.25, 16);
-      wheelGeom.rotateZ(Math.PI / 2);
-      [-0.92, 0.92].forEach((wx) => {
-        [1.15, -1.15].forEach((wz) => {
-          const wMesh = new THREE.Mesh(wheelGeom, wheelMat);
-          wMesh.position.set(wx, 0.36, wz);
-          this.meshGroup.add(wMesh);
-        });
-      });
-    } else if (this.type === 'police') {
-      // ★ 臺中市政府警察局 巡邏警車 (黑白經典巡邏車塗裝 + 車頂紅藍 LED 爆閃警燈條 + 警徽)
-      const whitePaint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.25 });
-      const navyMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3 });
-      const glassMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1 });
-
-      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.52, 3.8), whitePaint);
-      chassis.position.y = 0.38;
-      this.meshGroup.add(chassis);
-
-      // 前後車門深黑藍色警用區塊
-      [-0.91, 0.91].forEach((dx) => {
-        const door = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.36, 1.8), navyMat);
-        door.position.set(dx, 0.44, 0);
-        this.meshGroup.add(door);
-      });
-
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.48, 0.5, 2.0), glassMat);
-      cabin.position.set(0, 0.82, -0.15);
-      this.meshGroup.add(cabin);
-
-      // 車頂警燈與中央警報蜂鳴器
-      const lightBarBase = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.08, 0.22), new THREE.MeshStandardMaterial({ color: 0x222222 }));
-      lightBarBase.position.set(0, 1.12, -0.15);
-      this.meshGroup.add(lightBarBase);
-
-      const redStrobe = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.2), new THREE.MeshBasicMaterial({ color: 0xff1744 }));
-      redStrobe.position.set(-0.3, 1.2, -0.15);
-      this.meshGroup.add(redStrobe);
-
-      const blueStrobe = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.2), new THREE.MeshBasicMaterial({ color: 0x0066ff }));
-      blueStrobe.position.set(0.3, 1.2, -0.15);
-      this.meshGroup.add(blueStrobe);
-
-      const sirenSpeaker = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 10), new THREE.MeshStandardMaterial({ color: 0xdcdde1 }));
-      sirenSpeaker.position.set(0, 1.2, -0.15);
-      this.meshGroup.add(sirenSpeaker);
-
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.8 });
-      const wheelGeom = new THREE.CylinderGeometry(0.36, 0.36, 0.25, 16);
-      wheelGeom.rotateZ(Math.PI / 2);
-      [-0.92, 0.92].forEach((wx) => {
-        [1.15, -1.15].forEach((wz) => {
-          const wMesh = new THREE.Mesh(wheelGeom, wheelMat);
-          wMesh.position.set(wx, 0.36, wz);
-          this.meshGroup.add(wMesh);
-        });
-      });
     } else {
-      // 狂飆經典紅黑超跑
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x850000, roughness: 0.2, metalness: 0.7 });
-      const glassMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 });
-      const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.45, 3.6), bodyMat);
-      chassis.position.y = 0.35;
-      this.meshGroup.add(chassis);
-      const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.45, 1.8), glassMat);
-      cabin.position.set(0, 0.75, -0.2);
-      this.meshGroup.add(cabin);
-      const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8 });
-      const wheelGeom = new THREE.CylinderGeometry(0.35, 0.35, 0.24, 16);
-      wheelGeom.rotateZ(Math.PI / 2);
-      [-0.88, 0.88].forEach((wx) => {
-        [1.1, -1.1].forEach((wz) => {
-          const wMesh = new THREE.Mesh(wheelGeom, wheelMat);
-          wMesh.position.set(wx, 0.35, wz);
-          this.meshGroup.add(wMesh);
-        });
-      });
+      // 高精細流線車身 (vehicleModels.js)
+      const builders = { taxi: buildTaxi, police: buildPoliceCar, supercar: buildSupercar };
+      this.meshGroup.add((builders[this.type] || buildSupercar)());
     }
 
     this.meshGroup.traverse((child) => {
@@ -2049,13 +1916,16 @@ class Vehicle {
     const steerSpeed = 4.0;
     const maxSteer = 0.55;
 
-    // 氮氣加速 (Nitro Boost)
+    // 氮氣加速 (Nitro Boost) 支援地下改裝工坊升級
+    const nitroLvl = window.gameApp?.gtaManager?.upgrades?.nitro || 0;
+    const boostMult = 1.35 + nitroLvl * 0.15;
+    const rechargeRate = 8 + nitroLvl * 6;
     if (inputs.boost && this.boost > 5) {
       maxSpeed *= 1.35;
       accelRate *= 1.8;
       this.boost = Math.max(0, this.boost - dt * 25);
     } else {
-      this.boost = Math.min(100, this.boost + dt * 8);
+      this.boost = Math.min(100, this.boost + dt * rechargeRate);
     }
     const nosBar = document.getElementById('nos-bar');
     if (nosBar) nosBar.style.width = `${this.boost}%`;
@@ -2067,7 +1937,7 @@ class Vehicle {
     } else if (inputs.right) {
       this.steerAngle = Math.min(maxSteer, this.steerAngle + steerSpeed * dt);
     } else {
-      this.steerAngle *= 0.82; // 快速自動回正
+      this.steerAngle *= Math.pow(0.82, dt * 60); // 快速自動回正
     }
 
     // 2. 獲取車頭前進方向向量與右側橫向向量
@@ -2088,17 +1958,17 @@ class Vehicle {
     } else if (inputs.backward) {
       targetFwdSpeed = Math.max(-32, currentFwdSpeed - accelRate * 0.75 * dt * 3.6);
     } else {
-      targetFwdSpeed *= 0.985; // 自然路面滑行阻力
+      targetFwdSpeed *= Math.pow(0.985, dt * 60); // 自然路面滑行阻力
     }
 
     // 5. 煞車制動
     if (inputs.brake) {
-      targetFwdSpeed *= 0.91;
+      targetFwdSpeed *= Math.pow(0.91, dt * 60);
     }
 
     // 6. 輪胎橡膠抓地力模擬 (強效消除側滑，保留過彎流暢手感)
     const newFwdVel = targetFwdSpeed / 3.6;
-    const newSideVel = (currentSideSpeed * 0.12) / 3.6;
+    const newSideVel = (currentSideSpeed * Math.pow(0.12, dt * 60)) / 3.6;
 
     this.body.velocity.x = forwardX * newFwdVel + rightX * newSideVel;
     this.body.velocity.z = forwardZ * newFwdVel + rightZ * newSideVel;
@@ -3532,6 +3402,8 @@ export class TaichungRushApp {
 
     // 載具與主角人物雙模式系統 (Vehicle Driving vs On-foot Street Character)
     this.vehicle = null;
+    window.gameApp = this;
+    this.eggCount = 3;
     this.playerMode = 'vehicle'; // 'vehicle' (駕駛模式) | 'onfoot' (人物自由探索模式)
     this.character = null;
     this.inputs = {
@@ -3676,7 +3548,8 @@ export class TaichungRushApp {
       powerPreference: 'high-performance'
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
+    this.prCap = Math.min(window.devicePixelRatio, 1.25);
+    this.renderer.setPixelRatio(this.prCap);
     this.renderer.shadowMap.enabled = true; // 啟用高效能柔和陰影！
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -3933,6 +3806,7 @@ export class TaichungRushApp {
     document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.togglePlayerMode());
     document.getElementById('btn-eat')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-eat-egg')?.addEventListener('click', () => this.eatEgg());
+    document.getElementById('btn-shop')?.addEventListener('click', () => { document.getElementById('workshop-modal')?.classList.remove('hidden'); this.gtaManager?.updateWorkshopDisplay(); });
     document.getElementById('btn-mission')?.addEventListener('click', () => this.gtaManager?.triggerMission());
     document.getElementById('btn-shoot')?.addEventListener('click', () => this.gtaManager?.shootGun());
     document.getElementById('btn-horn')?.addEventListener('click', () => this.gtaManager?.triggerHorn());
@@ -4492,13 +4366,16 @@ export class TaichungRushApp {
         btn.classList.add('active');
         const q = btn.dataset.quality;
         if (q === 'low') {
+          this.prCap = 0.85;
           this.renderer.setPixelRatio(0.85);
           this.renderer.shadowMap.enabled = false;
         } else if (q === 'med') {
+          this.prCap = 1.0;
           this.renderer.setPixelRatio(1.0);
           this.renderer.shadowMap.enabled = true;
         } else if (q === 'high') {
-          this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+          this.prCap = Math.min(window.devicePixelRatio, 1.5);
+          this.renderer.setPixelRatio(this.prCap);
           this.renderer.shadowMap.enabled = true;
         }
         this.showToast(`🎨 畫質已套用：${btn.textContent}`);
@@ -5287,7 +5164,12 @@ export class TaichungRushApp {
   animate() {
     requestAnimationFrame(() => this.animate());
 
-    const dt = 1 / 60;
+    // 真實幀間隔 (限制範圍避免分頁切回時暴衝)，高更新率螢幕也維持同樣的遊戲速度
+    const nowMs = performance.now();
+    const rawDt = this._lastFrameMs ? (nowMs - this._lastFrameMs) / 1000 : 1 / 60;
+    this._lastFrameMs = nowMs;
+    const dt = Math.min(0.05, Math.max(0.001, rawDt));
+    this.updateAdaptiveResolution(rawDt);
 
     // 物理世界更新
     if (this.physicsWorld) {
@@ -5323,34 +5205,71 @@ export class TaichungRushApp {
 
     if (activePos) {
       // 360 度滑鼠視角自由環繞控制 (Mouse Orbit Camera)
-      const isDriving = this.playerMode === 'vehicle' && this.vehicle && this.vehicle.speed > 8;
-      const isWalking = this.playerMode === 'onfoot' && this.character && this.character.speed > 4;
+      const isVehicleMode = this.playerMode === 'vehicle';
+      const isDriving = isVehicleMode && this.vehicle && this.vehicle.speed > 8;
 
-      // 若一段時間無手動旋轉且正在移動，視角平滑回正
-      if (!this.isMouseDragging && performance.now() - this.lastOrbitInteractionTime > 2200 && (isDriving || isWalking)) {
-        this.orbitYaw *= 0.96;
+      // 模式切換時重設相機基準偏角
+      if (this._camMode !== this.playerMode || this._camYaw === undefined) {
+        this._camMode = this.playerMode;
+        this._camYaw = activeYaw;
       }
 
+      if (isVehicleMode) {
+        // 載具：相機平滑跟隨車頭方向，避免急轉彎時畫面瞬間甩動
+        let dYaw = activeYaw - this._camYaw;
+        while (dYaw > Math.PI) dYaw -= Math.PI * 2;
+        while (dYaw < -Math.PI) dYaw += Math.PI * 2;
+        this._camYaw += dYaw * (1 - Math.exp(-3.2 * dt));
+
+        // 若一段時間無手動旋轉且正在行駛，視角平滑回正
+        if (!this.isMouseDragging && performance.now() - this.lastOrbitInteractionTime > 2200 && isDriving) {
+          this.orbitYaw *= Math.exp(-2.4 * dt);
+        }
+      }
+      // 步行：相機方向只由滑鼠/觸控決定，不跟隨角色轉向，避免「轉身→鏡頭轉→再轉身」的迴授旋轉暈眩
+
       // 計算總相機偏角與球形三維軌道坐標
-      const totalYaw = activeYaw + this.orbitYaw;
+      const totalYaw = this._camYaw + this.orbitYaw;
       const horizDist = this.playerMode === 'onfoot' ? Math.max(3.2, this.orbitDist * 0.75) : this.orbitDist;
       const camPitch = this.playerMode === 'onfoot' ? Math.max(0.12, this.orbitPitch) : this.orbitPitch;
       const horizProj = horizDist * Math.cos(camPitch);
       const vertHeight = horizDist * Math.sin(camPitch) + (this.playerMode === 'onfoot' ? 1.5 : 1.2);
 
-      const targetCamPos = new THREE.Vector3(
+      if (!this._camTarget) this._camTarget = new THREE.Vector3();
+      if (!this._camLook) this._camLook = new THREE.Vector3(activePos.x, activePos.y + 1.2, activePos.z);
+      this._camTarget.set(
         activePos.x - Math.sin(totalYaw) * horizProj,
         activePos.y + vertHeight,
         activePos.z - Math.cos(totalYaw) * horizProj
       );
 
-      this.camera.position.lerp(targetCamPos, 0.16);
-      this.camera.lookAt(activePos.x, activePos.y + (this.playerMode === 'onfoot' ? 1.2 : 1.2), activePos.z);
+      // 與幀率無關的指數阻尼平滑 (位置與注視點皆平滑，避免抖動)
+      const posK = 1 - Math.exp(-(isVehicleMode ? 9 : 12) * dt);
+      const lookK = 1 - Math.exp(-16 * dt);
+      this.camera.position.lerp(this._camTarget, posK);
+      this._camLook.x += (activePos.x - this._camLook.x) * lookK;
+      this._camLook.y += (activePos.y + 1.2 - this._camLook.y) * lookK;
+      this._camLook.z += (activePos.z - this._camLook.z) * lookK;
+      this.camera.lookAt(this._camLook);
 
-      // 平行光陰影中心跟隨玩家，兼顧大範圍與極致陰影細節
+      // 平行光陰影中心跟隨玩家；以陰影貼圖像素為單位對齊，避免移動時陰影閃爍游動
       if (this.dirLight) {
-        this.dirLight.position.set(activePos.x + 120, 220, activePos.z + 100);
-        this.dirLight.target.position.copy(activePos);
+        if (!this._lightOff) {
+          this._lightOff = new THREE.Vector3(120, 220, 100);
+          this._lightZ = this._lightOff.clone().normalize();
+          this._lightX = new THREE.Vector3(0, 1, 0).cross(this._lightZ).normalize();
+          this._lightY = this._lightZ.clone().cross(this._lightX).normalize();
+        }
+        const texel = 90 / this.dirLight.shadow.mapSize.width;
+        const px = activePos.x * this._lightX.x + activePos.y * this._lightX.y + activePos.z * this._lightX.z;
+        const py = activePos.x * this._lightY.x + activePos.y * this._lightY.y + activePos.z * this._lightY.z;
+        const sx = Math.round(px / texel) * texel - px;
+        const sy = Math.round(py / texel) * texel - py;
+        const tx = activePos.x + this._lightX.x * sx + this._lightY.x * sy;
+        const ty = activePos.y + this._lightX.y * sx + this._lightY.y * sy;
+        const tz = activePos.z + this._lightX.z * sx + this._lightY.z * sy;
+        this.dirLight.position.set(tx + this._lightOff.x, ty + this._lightOff.y, tz + this._lightOff.z);
+        this.dirLight.target.position.set(tx, ty, tz);
         this.dirLight.target.updateMatrixWorld();
       }
 
@@ -5363,8 +5282,11 @@ export class TaichungRushApp {
         this.chunkManager.update(activePos, dt, bodyOrDummy);
       }
 
-      // 繪製 Minimap 雷達小地圖
-      this.drawMinimap(activePos);
+      // 繪製 Minimap 雷達小地圖 (限制約 30 FPS)
+      if (nowMs - (this._lastMinimapMs || 0) > 33) {
+        this._lastMinimapMs = nowMs;
+        this.drawMinimap(activePos);
+      }
 
       // GPS 導航距離更新
       if (this.gpsTarget) {
@@ -5407,6 +5329,25 @@ export class TaichungRushApp {
     }
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // 動態解析度：幀率低時自動降低像素比，穩定後再緩慢升回，避免卡頓造成的不適
+  updateAdaptiveResolution(rawDt) {
+    if (!this._frameAcc) { this._frameAcc = 0; this._frameCnt = 0; }
+    if (rawDt > 0.25) return; // 忽略分頁切換等異常長幀
+    this._frameAcc += rawDt;
+    this._frameCnt++;
+    if (this._frameCnt < 45) return;
+    const avg = this._frameAcc / this._frameCnt;
+    this._frameAcc = 0;
+    this._frameCnt = 0;
+    const cap = this.prCap || 1.25;
+    const cur = this.renderer.getPixelRatio();
+    if (avg > 0.026 && cur > 0.7) {
+      this.renderer.setPixelRatio(Math.max(0.7, cur - 0.1));
+    } else if (avg < 0.0185 && cur < cap) {
+      this.renderer.setPixelRatio(Math.min(cap, cur + 0.05));
+    }
   }
 
   getNearbyRoads(x, z) {

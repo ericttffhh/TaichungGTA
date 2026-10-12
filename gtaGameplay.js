@@ -304,28 +304,27 @@ class PoliceCruiserAI {
     const dz = playerPos.z - this.position.z;
     const distToPlayer = Math.hypot(dx, dz);
 
-    if (distToPlayer > 300) {
-      // 距離過遠，自動跳近重新包抄攔截
-      const behindAngle = Math.random() * Math.PI * 2;
-      this.position.set(playerPos.x + Math.sin(behindAngle) * 70, 0.4, playerPos.z + Math.cos(behindAngle) * 70);
-      this.speed = 10;
+    // 距離超過 150 米直接宣告跟丟並標記銷毀，絕不瞬移作弊！
+    if (distToPlayer > 150) {
+      this.isDead = true;
+      this.dispose();
       return;
     }
 
-    // 計算目標轉向偏角
+    // 計算目標轉向偏角 (警車轉向有物理慣性，玩家拐彎進巷弄能甩開)
     const targetYaw = Math.atan2(dx, dz);
     let diffYaw = targetYaw - this.yaw;
     while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
     while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
 
-    this.yaw += diffYaw * Math.min(1.0, 3.2 * dt);
+    this.yaw += diffYaw * Math.min(1.0, 2.2 * dt);
 
-    // 追逐加速控制
+    // 追逐速度：一般追逐最高時速約 80 km/h，玩家全速或超跑/氮氣能明確拉開距離
     if (distToPlayer > 8) {
-      this.speed = Math.min(this.maxSpeed, this.speed + 14 * dt);
+      this.speed = Math.min(22, this.speed + 12 * dt);
     } else {
-      // PIT 包抄近身撞擊衝刺
-      this.speed = Math.min(this.maxSpeed * 1.15, this.speed + 22 * dt);
+      // 近身包抄衝刺
+      this.speed = Math.min(25, this.speed + 16 * dt);
     }
 
     this.position.x += Math.sin(this.yaw) * this.speed * dt;
@@ -362,6 +361,8 @@ class PoliceCruiserAI {
 
 // ============================================================================
 // 3. GTA 開放世界核心玩法管理系統 (GtaGameplayManager)
+// 包含：多元兼職副業(計程車/美食外送/警網追緝/極速計時)、測速照相機、
+// 特技跳台、8處台中城市文創寶藏探索、地下改裝工坊
 // ============================================================================
 export class GtaGameplayManager {
   constructor(app) {
@@ -370,7 +371,7 @@ export class GtaGameplayManager {
 
     // 通緝星級 (0~5 星)
     this.wantedStars = 0;
-    this.wantedCooldown = 0; // 脫離警車視線冷卻時間
+    this.wantedCooldown = 0;
     this.lastOffenseTime = 0;
 
     // 金幣與懸賞
@@ -383,12 +384,34 @@ export class GtaGameplayManager {
     // 子彈軌跡與特效
     this.bullets = [];
 
-    // 當前街頭任務
+    // 當前任務或副業
     this.currentMission = null;
     this.missionTimer = 0;
 
     // 喇叭與警笛狀態
     this.isSirenActive = false;
+
+    // 改裝工坊升級數值
+    this.upgrades = {
+      nitro: 0,
+      armor: 0,
+      gun: 0,
+      egg: 0
+    };
+
+    // 收集品狀態
+    this.collectibles = [];
+    this.collectedCount = 0;
+
+    // 測速照相桿列表
+    this.speedTraps = [];
+
+    // 特技跳台列表
+    this.stuntRamps = [];
+
+    // 特技飛行計時
+    this.airTime = 0;
+    this.isAirborne = false;
 
     // 預設經典任務列表
     this.missionCatalog = [
@@ -396,8 +419,8 @@ export class GtaGameplayManager {
         id: 'mission_station_courier',
         title: '📦【台中車站緊急急件】',
         desc: '在 50 秒內急速奔馳抵達台中火車站！',
-        targetX: -5.0,
-        targetZ: 125.5,
+        targetX: 75.0,
+        targetZ: 0.0,
         targetName: '臺中火車站',
         timeLimit: 50,
         reward: 6000
@@ -406,21 +429,31 @@ export class GtaGameplayManager {
         id: 'mission_hotel_vip',
         title: '💼【李方艾美機密公文】',
         desc: '將急件在 45 秒內護送至李方艾美酒店！',
-        targetX: -196.3,
-        targetZ: 136.0,
+        targetX: 55.0,
+        targetZ: 95.0,
         targetName: '李方艾美酒店',
         timeLimit: 45,
         reward: 8000
       },
       {
-        id: 'mission_mrt_rush',
-        title: '🏎️【亞洲大飯店極速接送】',
-        desc: '在 40 秒內衝往亞洲大飯店！',
-        targetX: -172.7,
-        targetZ: -89.0,
-        targetName: '亞洲大飯店',
-        timeLimit: 40,
-        reward: 7500
+        id: 'mission_miyahara',
+        title: '🍨【宮原眼科冰品極速特送】',
+        desc: '在 45 秒內衝往綠川旁的宮原眼科！',
+        targetX: -12.0,
+        targetZ: 48.0,
+        targetName: '宮原眼科',
+        timeLimit: 45,
+        reward: 7000
+      },
+      {
+        id: 'mission_park_pavilion',
+        title: '🌳【台中公園湖心亭特快車】',
+        desc: '在 55 秒內全速抵達百年古蹟湖心亭！',
+        targetX: -75.0,
+        targetZ: -210.0,
+        targetName: '台中公園湖心亭',
+        timeLimit: 55,
+        reward: 9000
       },
       {
         id: 'mission_escape_cops',
@@ -436,14 +469,321 @@ export class GtaGameplayManager {
     this.missionIndex = 0;
     this.updateWantedUI();
     this.updateCashUI();
+
+    // 初始化地圖互動元素：寶藏箱、測速照相桿、特技跳台
+    this.setupWorldActivities();
+    this.initWorkshopUI();
+  }
+
+  // 初始化世界地圖特殊活動
+  setupWorldActivities() {
+    const scene = this.app.scene;
+    if (!scene) return;
+
+    // 1. 設置 8 處【台中城市文創金幣寶藏 (City Treasures)】
+    const treasureSpots = [
+      { name: '臺中車站高架穹頂寶箱', x: 75, z: 15 },
+      { name: '李方艾美旋轉飛碟金庫', x: 55, z: 110 },
+      { name: '宮原眼科綠川水岸寶藏', x: -12, z: 62 },
+      { name: '自由路太陽餅文化寶藏', x: -95, z: 32 },
+      { name: '第二市場東泉辣醬寶箱', x: -195, z: 60 },
+      { name: '台中公園湖心亭秘寶', x: -75, z: -195 },
+      { name: '帝國製糖廠湧泉湖畔寶藏', x: 235, z: -130 },
+      { name: 'LaLaport 購物商場頂樓寶箱', x: 210, z: -205 }
+    ];
+
+    treasureSpots.forEach((spot, idx) => {
+      const g = new THREE.Group();
+      // 金色旋轉發光寶箱主體
+      const boxMat = new THREE.MeshStandardMaterial({
+        color: 0xffd700,
+        roughness: 0.25,
+        metalness: 0.85,
+        emissive: 0xffa500,
+        emissiveIntensity: 0.4
+      });
+      const box = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 0.9), boxMat);
+      box.position.y = 0.8;
+      g.add(box);
+
+      // 箱頂裝飾金環
+      const lid = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.08, 8, 16), boxMat);
+      lid.position.y = 1.35;
+      g.add(lid);
+
+      // 地面旋轉金色導引光圈
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0xffe066,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.2, 1.8, 24), ringMat);
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.y = 0.08;
+      g.add(ring);
+
+      g.position.set(spot.x, 0, spot.z);
+      scene.add(g);
+
+      this.collectibles.push({
+        id: idx,
+        name: spot.name,
+        mesh: g,
+        pos: new THREE.Vector3(spot.x, 0.8, spot.z),
+        collected: false
+      });
+    });
+
+    // 2. 設置 4 處【極速測速照相機 (Speed Traps)】
+    const trapSpots = [
+      { name: '臺灣大道一段 (東向)', x: -60, z: 12, yaw: Math.PI / 2, limit: 70 },
+      { name: '臺灣大道一段 (西向)', x: -210, z: -12, yaw: -Math.PI / 2, limit: 75 },
+      { name: '建國路車站前', x: 42, z: -80, yaw: 0, limit: 65 },
+      { name: '民權路老市府路口', x: -140, z: 142, yaw: Math.PI / 2, limit: 70 }
+    ];
+
+    trapSpots.forEach((ts) => {
+      const g = new THREE.Group();
+      // 照相金屬直柱
+      const poleMat = new THREE.MeshStandardMaterial({ color: 0x57606f, roughness: 0.4, metalness: 0.7 });
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 4.2, 12), poleMat);
+      pole.position.y = 2.1;
+      g.add(pole);
+
+      // 黃黑斜紋反光基座
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.3 });
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 1.2, 12), baseMat);
+      base.position.y = 0.6;
+      g.add(base);
+
+      // 照相鏡頭金屬箱體
+      const boxMat = new THREE.MeshStandardMaterial({ color: 0x2f3542, roughness: 0.2 });
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 0.7), boxMat);
+      box.position.y = 3.8;
+      g.add(box);
+
+      // 雙鏡頭 (測速鏡頭 + 高壓氙氣閃光燈)
+      const lensMat = new THREE.MeshBasicMaterial({ color: 0x00d2d3 });
+      const lens = new THREE.Mesh(new THREE.CircleGeometry(0.18, 16), lensMat);
+      lens.position.set(0.2, 3.8, 0.36);
+      g.add(lens);
+
+      const strobeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const strobe = new THREE.Mesh(new THREE.CircleGeometry(0.14, 16), strobeMat);
+      strobe.position.set(-0.2, 3.8, 0.36);
+      g.add(strobe);
+
+      g.position.set(ts.x, 0, ts.z);
+      g.rotation.y = ts.yaw;
+      scene.add(g);
+
+      this.speedTraps.push({
+        name: ts.name,
+        pos: new THREE.Vector3(ts.x, 0, ts.z),
+        limit: ts.limit,
+        lastTriggerTime: 0
+      });
+    });
+
+    // 3. 設置 2 處【街頭特技跳台 (Stunt Ramps)】
+    const rampSpots = [
+      { name: '臺灣大道極速跳台', x: -110, z: -1, yaw: -Math.PI / 2 },
+      { name: '建國路車站前特技台', x: 48, z: 80, yaw: 0 }
+    ];
+
+    rampSpots.forEach((rs) => {
+      const g = new THREE.Group();
+      // 斜坡幾何體 (寬 5.5m, 長 6.5m, 高 1.8m)
+      const rampGeom = new THREE.BoxGeometry(5.5, 0.4, 7.0);
+      const rampMat = new THREE.MeshStandardMaterial({
+        color: 0xe74c3c,
+        roughness: 0.4,
+        metalness: 0.3
+      });
+      const ramp = new THREE.Mesh(rampGeom, rampMat);
+      ramp.rotation.x = -0.26;
+      ramp.position.set(0, 0.9, 0);
+      g.add(ramp);
+
+      // 兩側安全反光條
+      const stripeMat = new THREE.MeshBasicMaterial({ color: 0xf1c40f });
+      [-2.6, 2.6].forEach((sx) => {
+        const border = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.6, 7.0), stripeMat);
+        border.rotation.x = -0.26;
+        border.position.set(sx, 1.0, 0);
+        g.add(border);
+      });
+
+      g.position.set(rs.x, 0, rs.z);
+      g.rotation.y = rs.yaw;
+      scene.add(g);
+
+      this.stuntRamps.push({
+        name: rs.name,
+        pos: new THREE.Vector3(rs.x, 0, rs.z)
+      });
+    });
+  }
+
+  // 初始化改裝工坊彈窗操作
+  initWorkshopUI() {
+    const modal = document.getElementById('workshop-modal');
+    const btnOpen = document.getElementById('btn-shop');
+    const btnClose = document.getElementById('btn-close-workshop');
+
+    const openWorkshop = () => {
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      this.updateWorkshopDisplay();
+      if (document.exitPointerLock) document.exitPointerLock();
+    };
+
+    const closeWorkshop = () => {
+      if (!modal) return;
+      modal.classList.add('hidden');
+    };
+
+    btnOpen?.addEventListener('click', openWorkshop);
+    btnClose?.addEventListener('click', closeWorkshop);
+
+    // 快捷鍵 [U] 開關改裝工坊
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyU' || e.key === 'u' || e.key === 'U') {
+        if (modal && !modal.classList.contains('hidden')) {
+          closeWorkshop();
+        } else {
+          openWorkshop();
+        }
+      }
+    });
+
+    // 購買升級事件監聽
+    document.querySelectorAll('.btn-upgrade-action').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const type = e.target.dataset.type;
+        this.purchaseUpgrade(type);
+      });
+    });
+  }
+
+  // 更新工坊顯示數值與升級狀態
+  updateWorkshopDisplay() {
+    const cashEl = document.getElementById('shop-current-cash');
+    if (cashEl) cashEl.textContent = `$${this.cash.toLocaleString()}`;
+
+    const prices = {
+      nitro: [12000, 25000, 50000],
+      armor: [15000, 30000, 60000],
+      gun: [20000, 45000, 80000],
+      egg: [8000, 16000, 32000]
+    };
+
+    // 氮氣
+    const lvlNitro = this.upgrades.nitro;
+    const btnNitro = document.getElementById('btn-buy-nitro');
+    const textNitro = document.getElementById('lvl-nitro');
+    if (textNitro) textNitro.textContent = `Lv.${lvlNitro} ${lvlNitro >= 3 ? '(已達滿級)' : ''}`;
+    if (btnNitro) {
+      if (lvlNitro >= 3) {
+        btnNitro.textContent = '已升至滿級';
+        btnNitro.classList.add('maxed');
+      } else {
+        btnNitro.textContent = `升級 ($${prices.nitro[lvlNitro].toLocaleString()})`;
+        btnNitro.classList.remove('maxed');
+      }
+    }
+
+    // 裝甲
+    const lvlArmor = this.upgrades.armor;
+    const btnArmor = document.getElementById('btn-buy-armor');
+    const textArmor = document.getElementById('lvl-armor');
+    if (textArmor) textArmor.textContent = `Lv.${lvlArmor} ${lvlArmor >= 3 ? '(已達滿級)' : ''}`;
+    if (btnArmor) {
+      if (lvlArmor >= 3) {
+        btnArmor.textContent = '已升至滿級';
+        btnArmor.classList.add('maxed');
+      } else {
+        btnArmor.textContent = `升級 ($${prices.armor[lvlArmor].toLocaleString()})`;
+        btnArmor.classList.remove('maxed');
+      }
+    }
+
+    // 機槍
+    const lvlGun = this.upgrades.gun;
+    const btnGun = document.getElementById('btn-buy-gun');
+    const textGun = document.getElementById('lvl-gun');
+    if (textGun) textGun.textContent = `Lv.${lvlGun} ${lvlGun >= 2 ? '(雙管連發火網)' : ''}`;
+    if (btnGun) {
+      if (lvlGun >= 2) {
+        btnGun.textContent = '已升至滿級';
+        btnGun.classList.add('maxed');
+      } else {
+        btnGun.textContent = `升級 ($${prices.gun[lvlGun].toLocaleString()})`;
+        btnGun.classList.remove('maxed');
+      }
+    }
+
+    // 茶葉蛋
+    const lvlEgg = this.upgrades.egg;
+    const btnEgg = document.getElementById('btn-buy-egg');
+    const textEgg = document.getElementById('lvl-egg');
+    const cap = 3 + lvlEgg * 2;
+    if (textEgg) textEgg.textContent = `Lv.${lvlEgg} (${cap} 顆上限)`;
+    if (btnEgg) {
+      if (lvlEgg >= 3) {
+        btnEgg.textContent = '已升至滿級';
+        btnEgg.classList.add('maxed');
+      } else {
+        btnEgg.textContent = `擴容 ($${prices.egg[lvlEgg].toLocaleString()})`;
+        btnEgg.classList.remove('maxed');
+      }
+    }
+  }
+
+  // 購買強化工坊升級項目
+  purchaseUpgrade(type) {
+    const prices = {
+      nitro: [12000, 25000, 50000],
+      armor: [15000, 30000, 60000],
+      gun: [20000, 45000, 80000],
+      egg: [8000, 16000, 32000]
+    };
+    const maxLvls = { nitro: 3, armor: 3, gun: 2, egg: 3 };
+
+    const curLvl = this.upgrades[type] || 0;
+    if (curLvl >= maxLvls[type]) {
+      this.app.showToast('✅ 此項目已達最高升級等級！');
+      return;
+    }
+
+    const cost = prices[type][curLvl];
+    if (this.cash < cost) {
+      this.app.showToast(`❌ 現金不足！需要 $${cost.toLocaleString()}，請多接任務或探索寶藏！`);
+      return;
+    }
+
+    this.cash -= cost;
+    this.upgrades[type] = curLvl + 1;
+    this.updateCashUI();
+    this.updateWorkshopDisplay();
+    this.audio.playCashChime();
+
+    // 立即生效升級數值
+    if (type === 'egg') {
+      this.app.eggCount = Math.min(3 + this.upgrades.egg * 2, (this.app.eggCount || 3) + 2);
+      const eggEl = document.getElementById('egg-count-val');
+      if (eggEl) eggEl.textContent = `${this.app.eggCount} 顆`;
+    }
+
+    this.app.showToast(`🚀 強化成功！【${type.toUpperCase()}】已提升至 Lv.${this.upgrades[type]}`);
   }
 
   // 增加/設定通緝星級
   addWanted(stars = 1) {
     this.wantedStars = Math.min(5, this.wantedStars + stars);
-    this.wantedCooldown = 12.0; // 12 秒內避開警車可消星
+    this.wantedCooldown = 12.0;
     this.updateWantedUI();
-
     this.app.showToast(`🚨 通緝星級上升至 ${this.wantedStars} 星！警網全面攔截！`);
   }
 
@@ -454,13 +794,12 @@ export class GtaGameplayManager {
     soundManager.setPoliceSiren(false);
     this.updateWantedUI();
 
-    // 遣散警車
     this.policeCruisers.forEach((p) => p.dispose());
     this.policeCruisers = [];
     this.app.showToast('✅ 成功甩開警方！通緝已撤銷。');
   }
 
-  // 更新通緝星級 HUD 與螢幕紅邊警示特效
+  // 更新通緝星級 HUD
   updateWantedUI() {
     const starContainer = document.getElementById('wanted-stars');
     if (starContainer) {
@@ -476,7 +815,6 @@ export class GtaGameplayManager {
       });
     }
 
-    // ★ 通緝螢幕閃爍紅邊警示特效 (無聲音，僅亮紅邊)
     const redBorder = document.getElementById('wanted-red-border');
     if (redBorder) {
       if (this.wantedStars > 0) {
@@ -504,52 +842,121 @@ export class GtaGameplayManager {
     if (cashEl) {
       cashEl.textContent = `$${this.cash.toLocaleString()}`;
     }
+    const shopCashEl = document.getElementById('shop-current-cash');
+    if (shopCashEl) {
+      shopCashEl.textContent = `$${this.cash.toLocaleString()}`;
+    }
   }
 
-  // 車窗鳴槍 (Drive-by Shooting) [J] 鍵
+  // 車窗鳴槍 (Drive-by Shooting) [J] 鍵 (支援工坊多發衝鋒槍改裝)
   shootGun() {
     this.audio.playGunshot();
 
     const carPos = this.app.vehicle.body.position;
     const carYaw = this.app.vehicle.currentYaw;
 
-    // 車頭正向
     const fwdX = Math.sin(carYaw);
     const fwdZ = Math.cos(carYaw);
 
-    // 建立 3D 子彈光束 (Tracer Beam)
-    const tracerGeom = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, 0),
-      new THREE.Vector3(0, 0, -3.5)
-    ]);
-    const tracerMat = new THREE.LineBasicMaterial({ color: 0xfff000, linewidth: 3 });
-    const tracerLine = new THREE.Line(tracerGeom, tracerMat);
+    const shotCount = 1 + this.upgrades.gun * 2; // Lv.0=1發, Lv.1=3發, Lv.2=5發
 
-    tracerLine.position.set(carPos.x + fwdX * 2.2, carPos.y + 0.4, carPos.z + fwdZ * 2.2);
-    tracerLine.rotation.y = carYaw;
-    this.app.scene.add(tracerLine);
+    for (let s = 0; s < shotCount; s++) {
+      const spread = (s - (shotCount - 1) / 2) * 0.08;
+      const angle = carYaw + spread;
+      const dx = Math.sin(angle);
+      const dz = Math.cos(angle);
 
-    this.bullets.push({
-      mesh: tracerLine,
-      pos: new THREE.Vector3(tracerLine.position.x, tracerLine.position.y, tracerLine.position.z),
-      dir: new THREE.Vector3(fwdX, 0, fwdZ),
-      speed: 180, // 180 m/s
-      life: 0.6 // 壽命 0.6 秒
-    });
+      const tracerGeom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -3.5)
+      ]);
+      const tracerMat = new THREE.LineBasicMaterial({
+        color: this.upgrades.gun > 0 ? 0xff4757 : 0xfff000,
+        linewidth: 3
+      });
+      const tracerLine = new THREE.Line(tracerGeom, tracerMat);
 
-    // 違規鳴槍吸引警察關注 (觸發 1 星通緝)
+      tracerLine.position.set(carPos.x + dx * 2.2, carPos.y + 0.4, carPos.z + dz * 2.2);
+      tracerLine.rotation.y = angle;
+      this.app.scene.add(tracerLine);
+
+      this.bullets.push({
+        mesh: tracerLine,
+        pos: new THREE.Vector3(tracerLine.position.x, tracerLine.position.y, tracerLine.position.z),
+        dir: new THREE.Vector3(dx, 0, dz),
+        speed: 185,
+        life: 0.65
+      });
+    }
+
     if (this.wantedStars === 0) {
       this.addWanted(1);
     }
   }
 
-  // 觸發或領取街頭任務 [Q] 鍵
+  // 觸發街頭副業或任務 [Q] 鍵 (智慧推薦副業)
   triggerMission() {
     if (this.currentMission) {
       this.app.showToast(`⚠️ 目前已有進行中的任務：${this.currentMission.title}`);
       return;
     }
 
+    const vehType = this.app.vehicle?.type;
+
+    // 1. 若開計程車：接送客人載客副業
+    if (vehType === 'taxi') {
+      const taxiDestinations = [
+        { name: '宮原眼科冰品旗艦店', x: -12, z: 48, desc: '「司機！麻煩送我去宮原眼科買冰淇淋！」' },
+        { name: '李方艾美金沙大樓', x: 55, z: 95, desc: '「運將大哥，我要趕去李方艾美開國際會議！」' },
+        { name: '第二市場美食街', x: -195, z: 45, desc: '「少年仔，載我去第二市場吃老牌炒麵加東泉！」' },
+        { name: '台中公園湖心亭', x: -75, z: -210, desc: '「去台中公園散步，麻煩開順一點謝謝！」' }
+      ];
+      const dest = taxiDestinations[Math.floor(Math.random() * taxiDestinations.length)];
+
+      this.currentMission = {
+        type: 'taxi_job',
+        title: `🚕【計程車載客接送 · ${dest.name}】`,
+        targetX: dest.x,
+        targetZ: dest.z,
+        targetName: dest.name,
+        timeLimit: 50,
+        reward: 5800
+      };
+      this.missionTimer = 50;
+
+      this.setGps(dest.x, dest.z, dest.name);
+      soundManager.playMissionStart();
+      this.app.showToast(`🙋 載到乘客！${dest.desc}`);
+      return;
+    }
+
+    // 2. 若騎機車：經典美食外送副業
+    if (vehType === 'scooter') {
+      const foodDeliveries = [
+        { name: '繼光香香雞創始總店', x: -45, z: 25, item: '酥脆香香雞一份' },
+        { name: '自由路太陽餅博物館', x: -95, z: 20, item: '現烤特產太陽餅禮盒' },
+        { name: '第二市場老牌炒麵', x: -195, z: 45, item: '大碗炒麵加東泉辣醬' }
+      ];
+      const food = foodDeliveries[Math.floor(Math.random() * foodDeliveries.length)];
+
+      this.currentMission = {
+        type: 'food_delivery',
+        title: `🛵【台中熊貓特快外送 · ${food.item}】`,
+        targetX: food.x,
+        targetZ: food.z,
+        targetName: food.name,
+        timeLimit: 45,
+        reward: 5200
+      };
+      this.missionTimer = 45;
+
+      this.setGps(food.x, food.z, food.name);
+      soundManager.playMissionStart();
+      this.app.showToast(`📦 接到外送訂單！火速送往：${food.name}（${food.item}）`);
+      return;
+    }
+
+    // 3. 一般任務列表循環
     const mission = this.missionCatalog[this.missionIndex % this.missionCatalog.length];
     this.missionIndex++;
 
@@ -560,20 +967,18 @@ export class GtaGameplayManager {
       this.addWanted(mission.requiredStars || 3);
       this.app.showToast(`🎯 接取任務：${mission.title}（倒數 ${mission.timeLimit} 秒）`);
     } else {
-      // 鎖定 GPS 導航至任務目標
-      this.app.gpsTarget = {
-        x: mission.targetX,
-        z: mission.targetZ,
-        name: mission.targetName
-      };
-      const hint = document.getElementById('gps-target-hint');
-      if (hint) hint.classList.remove('hidden');
-      const targetNameEl = document.getElementById('gps-target-name');
-      if (targetNameEl) targetNameEl.textContent = mission.targetName;
-
+      this.setGps(mission.targetX, mission.targetZ, mission.targetName);
       soundManager.playMissionStart();
       this.app.showToast(`🎯 接取任務：${mission.title}！已設定 GPS 導航`);
     }
+  }
+
+  setGps(x, z, name) {
+    this.app.gpsTarget = { x, z, name };
+    const hint = document.getElementById('gps-target-hint');
+    if (hint) hint.classList.remove('hidden');
+    const targetNameEl = document.getElementById('gps-target-name');
+    if (targetNameEl) targetNameEl.textContent = name;
   }
 
   // 任務成功結算
@@ -584,9 +989,8 @@ export class GtaGameplayManager {
 
     this.addCash(reward);
     soundManager.playMissionSuccess();
-    this.app.showToast(`🎉 任務完成！獲得賞金 +$${reward.toLocaleString()}！`);
+    this.app.showToast(`🎉 ${title} 順利完成！獲得賞金 +$${reward.toLocaleString()}！`);
 
-    // 清除任務與 GPS 導航
     this.currentMission = null;
     this.app.gpsTarget = null;
     document.getElementById('gps-target-hint')?.classList.add('hidden');
@@ -594,7 +998,7 @@ export class GtaGameplayManager {
 
   // 鳴喇叭 / 切換警笛 [H] 鍵
   triggerHorn() {
-    if (this.app.vehicle.type === 'police') {
+    if (this.app.vehicle?.type === 'police') {
       this.isSirenActive = !this.isSirenActive;
       soundManager.setPoliceSiren(this.isSirenActive);
       this.app.showToast(this.isSirenActive ? '🚨 警笛長鳴開啟！' : '🔇 警笛關閉');
@@ -604,12 +1008,116 @@ export class GtaGameplayManager {
     }
   }
 
+  // 檢查寶藏拾取
+  checkCollectibles(playerPos) {
+    const time = performance.now() * 0.002;
+    this.collectibles.forEach((item) => {
+      if (item.collected) return;
+
+      // 旋轉與微浮動動畫
+      item.mesh.rotation.y = time * 1.5;
+      item.mesh.position.y = Math.sin(time * 3) * 0.15;
+
+      const dist = Math.hypot(playerPos.x - item.pos.x, playerPos.z - item.pos.z);
+      if (dist < 3.2) {
+        item.collected = true;
+        this.app.scene.remove(item.mesh);
+        this.collectedCount++;
+
+        this.addCash(10000);
+        soundManager.playMissionSuccess();
+
+        const badgeEl = document.getElementById('collectibles-val');
+        if (badgeEl) badgeEl.textContent = `${this.collectedCount}/8`;
+
+        this.app.showToast(`🎁 找到台中秘寶：【${item.name}】！獲得豐厚賞金 +$10,000！(${this.collectedCount}/8)`);
+      }
+    });
+  }
+
+  // 檢查測速照相機
+  checkSpeedTraps(playerPos, speed) {
+    const now = performance.now();
+    this.speedTraps.forEach((trap) => {
+      if (now - trap.lastTriggerTime < 8000) return; // 8 秒冷卻
+
+      const dist = Math.hypot(playerPos.x - trap.pos.x, playerPos.z - trap.pos.z);
+      if (dist < 14 && speed > trap.limit) {
+        trap.lastTriggerTime = now;
+
+        // 快門白閃特效
+        const flashOverlay = document.getElementById('speed-cam-flash');
+        if (flashOverlay) {
+          flashOverlay.classList.add('flashing');
+          setTimeout(() => flashOverlay.classList.remove('flashing'), 200);
+        }
+
+        // 快門音效
+        soundManager.playUIClick();
+
+        // 速度評級
+        let grade = 'B';
+        let bonus = 1000;
+        if (speed >= 125) {
+          grade = 'S 極速傳說';
+          bonus = 4500;
+        } else if (speed >= 95) {
+          grade = 'A 狂飆達人';
+          bonus = 2500;
+        }
+
+        this.addCash(bonus);
+        this.app.showToast(`📸【${trap.name} 測速照相】時速 ${Math.round(speed)} KM/H！評級：${grade}！獎金 +$${bonus.toLocaleString()}`);
+      }
+    });
+  }
+
+  // 檢查特技跳台與滯空判定
+  checkStuntRamps(playerPos, dt) {
+    if (this.app.playerMode !== 'vehicle') return;
+
+    // 檢查是否衝過跳台觸發飛躍衝力
+    this.stuntRamps.forEach((ramp) => {
+      const dist = Math.hypot(playerPos.x - ramp.pos.x, playerPos.z - ramp.pos.z);
+      if (dist < 4.5 && this.app.vehicle?.speed > 45 && this.app.vehicle.body.position.y < 2.0) {
+        // 給予向上的特技彈跳衝力
+        this.app.vehicle.body.velocity.y = 8.5;
+        this.app.showToast('🚀 衝上特技跳台！空中特技展開！');
+      }
+    });
+
+    // 滯空時間計算
+    if (this.app.vehicle?.body?.position?.y > 1.2) {
+      this.isAirborne = true;
+      this.airTime += dt;
+    } else if (this.isAirborne) {
+      // 落地結算
+      if (this.airTime > 0.8) {
+        const bonus = Math.round(this.airTime * 2000);
+        this.addCash(bonus);
+        this.app.showToast(`🤸 特技落地！滯空 ${this.airTime.toFixed(1)} 秒！獲得特技獎勵 +$${bonus.toLocaleString()}`);
+      }
+      this.isAirborne = false;
+      this.airTime = 0;
+    }
+  }
+
   // 每幀更新循環
   update(dt) {
-    const playerPos = this.app.vehicle?.body?.position;
+    const playerPos = this.app.playerMode === 'vehicle'
+      ? this.app.vehicle?.body?.position
+      : this.app.character?.mesh?.position;
+
     if (!playerPos) return;
 
-    // 1. 子彈彈道更新與命中判定
+    // 1. 更新寶藏箱、測速照相桿與特技跳台
+    this.checkCollectibles(playerPos);
+    if (this.app.playerMode === 'vehicle' && this.app.vehicle) {
+      this.checkSpeedTraps(playerPos, this.app.vehicle.speed || 0);
+      this.checkStuntRamps(playerPos, dt);
+    }
+
+    // 2. 子彈彈道更新與命中判定
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const b = this.bullets[i];
       b.life -= dt;
@@ -624,11 +1132,11 @@ export class GtaGameplayManager {
         const dist = cop.position.distanceTo(b.pos);
         if (dist < 2.5) {
           hit = true;
-          const killed = cop.takeDamage(45);
+          const killed = cop.takeDamage(50);
           this.audio.playCrash();
           if (killed) {
-            this.addCash(1500);
-            this.app.showToast('💥 擊毀臺中巡邏警車！獲得懸賞 +$1,500');
+            this.addCash(2000);
+            this.app.showToast('💥 擊毀臺中巡邏警車！獲得懸賞 +$2,000');
           }
           break;
         }
@@ -642,30 +1150,40 @@ export class GtaGameplayManager {
       }
     }
 
-    // 2. 警車生成與追捕巡邏
-    const desiredCops = Math.min(3, this.wantedStars);
+    // 3. 清理已陣亡或已徹底跟丟的警車
+    this.policeCruisers = this.policeCruisers.filter(c => !c.isDead);
+
+    // 計算最近的警車距離
+    const activeCops = this.policeCruisers.filter(c => !c.isDead);
+    const nearestCopDist = activeCops.length > 0
+      ? activeCops.reduce((min, c) => Math.min(min, c.position.distanceTo(playerPos)), Infinity)
+      : Infinity;
+
+    // 4. 警車生成邏輯：只有在玩家被緊咬 (距離 < 65m) 且通緝中時才謹慎增援，玩家正在甩開時禁止生車作弊！
+    const isEvading = nearestCopDist > 65;
+    const desiredCops = Math.min(2, this.wantedStars);
     this.policeSpawnCooldown -= dt;
 
-    if (this.policeCruisers.length < desiredCops && this.policeSpawnCooldown <= 0) {
-      this.policeSpawnCooldown = 3.5;
-      // 在玩家後方 60 米處生成警車
-      const angle = (this.app.vehicle.currentYaw || 0) + Math.PI + (Math.random() - 0.5) * 0.8;
-      const spawnX = playerPos.x + Math.sin(angle) * 60;
-      const spawnZ = playerPos.z + Math.cos(angle) * 60;
+    if (!isEvading && this.policeCruisers.length < desiredCops && this.policeSpawnCooldown <= 0) {
+      this.policeSpawnCooldown = 8.0; // 延長冷卻為 8 秒，給玩家充足逃脫空檔
+      const angle = (this.app.vehicle?.currentYaw || 0) + Math.PI + (Math.random() - 0.5) * 0.8;
+      const spawnX = playerPos.x + Math.sin(angle) * 75;
+      const spawnZ = playerPos.z + Math.cos(angle) * 75;
 
       const newCop = new PoliceCruiserAI(this.app.scene, spawnX, spawnZ);
       this.policeCruisers.push(newCop);
     }
 
-    // 3. 更新所有追逐警車 AI
+    // 5. 更新所有追逐警車 AI
     for (let i = this.policeCruisers.length - 1; i >= 0; i--) {
       const cop = this.policeCruisers[i];
       if (cop.isDead) continue;
 
-      cop.update(dt, playerPos, this.app.vehicle.body.velocity, () => {
-        // 撞擊玩家
+      cop.update(dt, playerPos, this.app.vehicle?.body?.velocity || new THREE.Vector3(), () => {
         this.audio.playCrash();
-        this.app.vehicle.health = Math.max(0, (this.app.vehicle.health || 100) - 8);
+        const armorReduction = this.upgrades.armor * 2;
+        const dmg = Math.max(3, 8 - armorReduction);
+        this.app.vehicle.health = Math.max(0, (this.app.vehicle.health || 100) - dmg);
         const hpBar = document.getElementById('health-bar');
         if (hpBar) hpBar.style.width = `${this.app.vehicle.health}%`;
         this.app.showToast('💥 遭到臺中警車 PIT 包抄撞擊！HP 受到損耗');
@@ -680,39 +1198,54 @@ export class GtaGameplayManager {
       });
     }
 
-    // 4. 通緝消退冷卻檢測 (遠離警車 100 米以上時星級慢慢消除)
+    // 6. ★ GTA 經典甩開警方機制 (Evade & Lose Cops)
     if (this.wantedStars > 0) {
-      const nearestCopDist = this.policeCruisers.reduce((min, c) => {
-        if (c.isDead) return min;
-        return Math.min(min, c.position.distanceTo(playerPos));
-      }, Infinity);
-
-      if (nearestCopDist > 75) {
+      if (isEvading) {
+        // 警方已跟丟失去視線！進入逃脫倒數 (只需保持 5.5 秒)
         this.wantedCooldown -= dt;
-        // 星級閃爍提示
-        if (Math.floor(this.wantedCooldown * 3) % 2 === 0) {
-          this.updateWantedUI();
+
+        // 星星閃爍提示（GTA 經典視覺回饋）
+        const isBlink = Math.floor(this.wantedCooldown * 4) % 2 === 0;
+        const starContainer = document.getElementById('wanted-stars');
+        if (starContainer) {
+          const stars = starContainer.querySelectorAll('.star');
+          stars.forEach((s, idx) => {
+            if (idx < this.wantedStars) {
+              s.style.opacity = isBlink ? '0.2' : '1.0';
+            }
+          });
         }
+
+        // 倒數結束：成功降星或完全擺脫！
         if (this.wantedCooldown <= 0) {
           this.wantedStars--;
-          this.wantedCooldown = 8.0;
+          this.wantedCooldown = 5.5;
           this.updateWantedUI();
-          if (this.wantedStars === 0) {
+
+          if (this.wantedStars <= 0) {
             this.clearWanted();
+            this.addCash(2500);
+            this.audio.playMissionSuccess();
+            this.app.showToast('🎉 成功甩開臺中警方追捕！通緝已全面解除！獲得脫逃獎金 +$2,500');
           } else {
-            this.app.showToast(`📉 甩開部分警力！通緝降至 ${this.wantedStars} 星`);
+            this.app.showToast(`📉 成功甩開追緝！通緝降至 ${this.wantedStars} 星，繼續保持距離！`);
           }
         }
       } else {
-        this.wantedCooldown = 12.0; // 再次被發現，重設冷卻
+        // 重新被警車近距離目擊，恢復正常星級顯示並重設倒數
+        if (this.wantedCooldown < 5.0 && (!this._lastSpottedTime || performance.now() - this._lastSpottedTime > 3500)) {
+          this._lastSpottedTime = performance.now();
+          this.app.showToast('⚠️ 再次被警車發現！請加速拐彎甩開！');
+        }
+        this.wantedCooldown = 5.5;
+        this.updateWantedUI();
       }
     }
 
-    // 5. 街頭任務進度與倒數
+    // 6. 街頭任務或兼職副業進度與倒數
     if (this.currentMission) {
       this.missionTimer -= dt;
 
-      // 檢查目標抵達判定
       if (this.currentMission.targetType === 'survive_wanted') {
         if (this.wantedStars === 0) {
           this.completeMission();
@@ -738,3 +1271,4 @@ export class GtaGameplayManager {
     }
   }
 }
+

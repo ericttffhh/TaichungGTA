@@ -170,13 +170,21 @@
       <div class="cash-display" id="cash-val">$88,888</div>
       <div class="hud-meta-row">
         <div class="clock-display" id="hud-clock">21:30</div>
+        <div class="item-badge" id="btn-collectibles-badge" title="台中城市文創寶藏探索 (共 8 處)">
+          <span class="item-icon">🎁</span>
+          <span class="item-label">寶藏</span>
+          <span class="item-count" id="collectibles-val">0/8</span>
+        </div>
         <div class="item-badge" id="btn-eat-egg" title="按 E 吃茶葉蛋補滿血量">
           <span class="item-icon">🥚</span>
           <span class="item-label">茶葉蛋 <kbd>E</kbd></span>
-          <span class="item-count">3 顆</span>
+          <span class="item-count" id="egg-count-val">3 顆</span>
         </div>
       </div>
     </div>
+
+    <!-- 測速照相機快門閃白效果 -->
+    <div id="speed-cam-flash" class="camera-flash-overlay"></div>
 
     <!-- 頂部中央 -->
     <div class="center-banner" id="center-banner">
@@ -221,7 +229,8 @@
       <span class="helper-hint" id="hud-mouse-hint">🎯 點擊鎖定滑鼠 (ESC解鎖)</span>
       <span class="helper-divider"></span>
 
-      <button class="helper-btn btn-act-mission" id="btn-mission"><kbd>Q</kbd> 任務</button>
+      <button class="helper-btn btn-act-mission" id="btn-mission"><kbd>Q</kbd> 接單/副業</button>
+      <button class="helper-btn btn-act-shop" id="btn-shop"><kbd>U</kbd> 改裝工坊</button>
       <button class="helper-btn btn-act-shoot" id="btn-shoot"><kbd>J</kbd> 鳴槍</button>
       <button class="helper-btn btn-act-horn" id="btn-horn"><kbd>H</kbd> 喇叭</button>
       <button class="helper-btn btn-act-radio" id="btn-radio"><kbd>N</kbd> 電台</button>
@@ -504,6 +513,59 @@
               <button class="toggle-btn" id="set-mode-onfoot">🚶 徒步探索</button>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       黑市改裝與強化工坊彈窗 (Workshop Upgrades Modal) [U]
+       ======================================================== -->
+  <div id="workshop-modal" class="game-modal-overlay hidden">
+    <div class="settings-card-panel workshop-panel">
+      <div class="modal-card-header">
+        <div class="modal-card-title">
+          <span>🔧 台中地下改裝與武器工坊 · TUNING WORKSHOP</span>
+        </div>
+        <button class="modal-card-close" id="btn-close-workshop">✕</button>
+      </div>
+
+      <div class="settings-content workshop-content">
+        <div class="workshop-cash-tag">
+          <span>目前手頭現金：</span>
+          <strong id="shop-current-cash">$88,888</strong>
+        </div>
+
+        <div class="upgrade-item-card" id="card-up-nitro">
+          <div class="upgrade-info">
+            <div class="upgrade-name">🚀 賽道級渦輪氮氣推進 (Turbo NOS System)</div>
+            <div class="upgrade-desc">提升氮氣加速爆發力與回復充能速度。目前等級：<span id="lvl-nitro">Lv.0</span></div>
+          </div>
+          <button class="btn-upgrade-action" id="btn-buy-nitro" data-type="nitro">升級 ($12,000)</button>
+        </div>
+
+        <div class="upgrade-item-card" id="card-up-armor">
+          <div class="upgrade-info">
+            <div class="upgrade-name">🛡️ 鈦合金防彈強化裝甲 (Chassis Armor)</div>
+            <div class="upgrade-desc">大幅增強防撞強度與車輛耐損度。目前等級：<span id="lvl-armor">Lv.0</span></div>
+          </div>
+          <button class="btn-upgrade-action" id="btn-buy-armor" data-type="armor">升級 ($15,000)</button>
+        </div>
+
+        <div class="upgrade-item-card" id="card-up-gun">
+          <div class="upgrade-info">
+            <div class="upgrade-name">🔫 車載雙管改裝衝鋒機槍 (Dual SMG Fire)</div>
+            <div class="upgrade-desc">車窗鳴槍改為多發連射火網，擴大攔截範圍。目前等級：<span id="lvl-gun">Lv.0</span></div>
+          </div>
+          <button class="btn-upgrade-action" id="btn-buy-gun" data-type="gun">升級 ($20,000)</button>
+        </div>
+
+        <div class="upgrade-item-card" id="card-up-egg">
+          <div class="upgrade-info">
+            <div class="upgrade-name">🥚 逢甲大容量茶葉蛋保溫袋 (Egg Storage)</div>
+            <div class="upgrade-desc">將茶葉蛋攜帶上限提升至 8 顆，續航力加倍！目前等級：<span id="lvl-egg">Lv.0 (3顆)</span></div>
+          </div>
+          <button class="btn-upgrade-action" id="btn-buy-egg" data-type="egg">擴容 ($8,000)</button>
         </div>
       </div>
     </div>

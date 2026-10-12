@@ -2419,5 +2419,120 @@ body.touch-device .hud-controls-helper {
   visibility: hidden !important;
 }
 
+/* =========================================================
+   測速照相白閃快門特效 (Speed Camera Shutter Flash)
+========================================================= */
+.camera-flash-overlay {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.05s ease-out;
+}
+.camera-flash-overlay.flashing {
+  opacity: 0.85;
+  transition: opacity 0.35s ease-out;
+}
 
+/* =========================================================
+   改裝工坊專屬樣式 (Tuning Workshop Panel)
+========================================================= */
+.workshop-panel {
+  max-width: 580px;
+  border-color: rgba(255, 152, 0, 0.55);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85), 0 0 28px rgba(255, 152, 0, 0.2);
+}
 
+.workshop-panel .modal-card-title {
+  color: #ff9800;
+}
+
+.workshop-cash-tag {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.25);
+  padding: 10px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  font-size: 0.95rem;
+}
+
+.workshop-cash-tag strong {
+  color: #2ecc71;
+  font-size: 1.25rem;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.upgrade-item-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  transition: all 0.2s ease;
+}
+
+.upgrade-item-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 152, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+.upgrade-info {
+  flex: 1;
+}
+
+.upgrade-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f1f2f6;
+  margin-bottom: 4px;
+}
+
+.upgrade-desc {
+  font-size: 0.8rem;
+  color: #a4b0be;
+  line-height: 1.35;
+}
+
+.upgrade-desc span {
+  color: #ffd32a;
+  font-weight: bold;
+}
+
+.btn-upgrade-action {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e67e22, #d35400);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-upgrade-action:hover {
+  background: linear-gradient(135deg, #f39c12, #e67e22);
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(230, 126, 34, 0.4);
+}
+
+.btn-upgrade-action.maxed {
+  background: #34495e;
+  border-color: #7f8c8d;
+  color: #bdc3c7;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
