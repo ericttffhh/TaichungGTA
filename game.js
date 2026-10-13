@@ -4641,7 +4641,7 @@ export class TaichungRushApp {
     return { x, z, angle: 0, roadName: '台中市區道路' };
   }
 
-  // 依照真實坐標與路網最近點，傳送到合法馬路路面 (絕不卡進建築物內)
+  // 依照真實坐標與路網最近點，傳送到合法馬路路面 (相容載具與徒步模式，絕不卡進建築物內)
   teleportToCoords(targetX, targetZ, name = '目標位置') {
     soundManager.playTeleport();
     const roadPt = this.findNearestRoadPoint(targetX, targetZ, 450);
@@ -4649,6 +4649,7 @@ export class TaichungRushApp {
     const spawnZ = roadPt.z;
     const faceAngle = roadPt.angle;
 
+    // 更新載具物理與視覺
     this.vehicle.body.position.set(spawnX, 1.2, spawnZ);
     this.vehicle.body.velocity.set(0, 0, 0);
     this.vehicle.body.angularVelocity.set(0, 0, 0);
@@ -4658,15 +4659,26 @@ export class TaichungRushApp {
     this.vehicle.meshGroup.position.set(spawnX, 1.2, spawnZ);
     this.vehicle.meshGroup.quaternion.copy(this.vehicle.body.quaternion);
 
-    // 相機鏡頭平滑置於車身後方 (5.8 米最佳第三人稱視角，完全維持於道路中線淨空區)
-    const camBackDist = 5.8;
-    const camBackX = spawnX - Math.sin(faceAngle) * camBackDist;
-    const camBackZ = spawnZ - Math.cos(faceAngle) * camBackDist;
-    this.camera.position.set(camBackX, 2.8, camBackZ);
-    this.camera.lookAt(spawnX, 1.4, spawnZ);
+    // 同步更新人物位置 (若處於徒步模式)
+    if (this.character) {
+      this.character.setPosition(spawnX, 1.2, spawnZ, faceAngle);
+    }
+
+    // 重設相機基準方位，避免瞬間視角混亂
+    this._camYaw = faceAngle;
+    this.orbitYaw = 0;
+
+    const isFoot = this.playerMode === 'onfoot';
+    const camDist = isFoot ? 3.6 : 5.8;
+    const camH = isFoot ? 2.1 : 2.8;
+    const targetH = isFoot ? 1.2 : 1.4;
+    const camX = spawnX - Math.sin(faceAngle) * camDist;
+    const camZ = spawnZ - Math.cos(faceAngle) * camDist;
+    this.camera.position.set(camX, camH, camZ);
+    this.camera.lookAt(spawnX, targetH, spawnZ);
 
     if (this.chunkManager) {
-      this.chunkManager.update({ x: spawnX, y: 1.2, z: spawnZ }, 0.016, this.vehicle.body);
+      this.chunkManager.update({ x: spawnX, y: 1.2, z: spawnZ }, 0.016, isFoot ? this.character.mesh : this.vehicle.body);
     }
 
     if (this.locationName) {
@@ -4705,7 +4717,7 @@ export class TaichungRushApp {
       { name: '臺中國家歌劇院', icon: '🎭', tag: '世界九大新地標', desc: '伊東豊雄曲牆美聲涵洞建築', x: -420, z: -150 },
       { name: '大慶車站 (臺鐵/捷運共構)', icon: '🚆', tag: '捷運綠線', desc: '臺鐵與台中捷運高架共構轉乘樞紐', x: -3833, z: 2118 },
       { name: '第二市場 (美食街/六角樓)', icon: '🍜', tag: '在地美食', desc: '百年老牌炒麵、東泉辣椒醬、菜頭粿', x: -195, z: 45 },
-      { name: '臺中市政府警察局第一分局', icon: '👮', tag: '執法重鎮', desc: '民權路與三民路口市警第一分局', x: -140, z: 142 },
+      { name: '臺灣大道一段 (市中心起點)', icon: '🛣️', tag: '繁華主幹道', desc: '雙向寬闊大馬路、兩側繁華店家騎樓', x: -160, z: 8 },
       { name: '亞洲大飯店 / 榮達大樓', icon: '🏢', tag: '中區地標', desc: '中區歷史摩天樓 · 175m 階梯塔樓', x: -159.6, z: -58.0 }
     ];
 

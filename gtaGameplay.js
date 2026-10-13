@@ -823,16 +823,12 @@ export class GtaGameplayManager {
       }
       this.isBusted = false;
 
-      // 移送獲釋：在臺中市警一分局 (民權路/三民路口) 安全釋放
-      if (this.app.playerMode === 'onfoot') {
-        this.app.character.setPosition(-140, 1.2, 142, 0);
-      } else {
-        this.app.teleportToCoords(-140, 142, '臺中市政府警察局第一分局');
-        if (this.app.vehicle) this.app.vehicle.health = 100;
-        const hpBar = document.getElementById('health-bar');
-        if (hpBar) hpBar.style.width = '100%';
-      }
-      this.app.showToast('🕊️ 已交保獲釋，車輛已修復完成，請遵守交通法規！');
+      // 移送獲釋：安全遣送至【臺灣大道一段】繁華市中心主幹道起點，杜絕傳入死角巷弄
+      this.app.teleportToCoords(-160, 8, '臺灣大道一段 · 市中心主幹道');
+      if (this.app.vehicle) this.app.vehicle.health = 100;
+      const hpBar = document.getElementById('health-bar');
+      if (hpBar) hpBar.style.width = '100%';
+      this.app.showToast('🕊️ 已交保獲釋！已安全護送回【臺灣大道一段】，車輛已修復完成，請遵守交通法規！');
     }, 2800);
   }
 
