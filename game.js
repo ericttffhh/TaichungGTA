@@ -3896,7 +3896,15 @@ export class TaichungRushApp {
         this.vehicle.resetPosition();
       }
     });
-    document.getElementById('btn-landmark')?.addEventListener('click', () => this.teleportToLandmark());
+    document.getElementById('btn-landmark')?.addEventListener('click', () => this.openTeleportModal());
+    document.getElementById('btn-close-teleport')?.addEventListener('click', () => this.closeTeleportModal());
+    document.getElementById('teleport-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'teleport-modal') this.closeTeleportModal();
+    });
+    document.getElementById('btn-quick-next-landmark')?.addEventListener('click', () => {
+      this.teleportToLandmark();
+      this.closeTeleportModal();
+    });
     document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.togglePlayerMode());
     document.getElementById('btn-eat')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-eat-egg')?.addEventListener('click', () => this.eatEgg());
@@ -4083,6 +4091,7 @@ export class TaichungRushApp {
     );
 
     // 快捷功能按鈕
+    bindTouchBtn('btn-m-teleport', () => this.openTeleportModal());
     bindTouchBtn('btn-m-settings', () => this.toggleSettingsModal());
     bindTouchBtn('btn-m-fullscreen', () => this.toggleFullscreen());
     bindTouchBtn('btn-m-mission', () => this.gtaManager?.triggerMission());
@@ -4664,6 +4673,59 @@ export class TaichungRushApp {
       this.locationName.textContent = `📍 已傳送至：${name} (${roadPt.roadName})`;
     }
     this.showToast(`🚀 已傳送至道路：${name}`);
+  }
+
+  // 開啟地標快速傳送選單 (支援手機觸控選取與桌面點擊)
+  openTeleportModal() {
+    const modal = document.getElementById('teleport-modal');
+    if (!modal) return;
+    if (document.pointerLockElement) document.exitPointerLock?.();
+    modal.classList.remove('hidden');
+    this.renderTeleportList();
+  }
+
+  closeTeleportModal() {
+    const modal = document.getElementById('teleport-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  // 繪製地標傳送卡片清單
+  renderTeleportList() {
+    const grid = document.getElementById('teleport-landmarks-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
+
+    const list = [
+      { name: '臺中火車站 & 站前廣場', icon: '🏛️', tag: '國定古蹟', desc: '新站高架穹頂與百年紅磚鐘塔', x: -5, z: 145 },
+      { name: '李方艾美酒店 (金沙大樓)', icon: '🏢', tag: '中區最高', desc: '中區第一高樓與旋轉飛碟圓頂', x: -158.2, z: 138.8 },
+      { name: '宮原眼科 (綠川水岸)', icon: '🍦', tag: '文化排隊名店', desc: '綠川日治紅磚洋樓與人氣冰淇淋', x: -12, z: 48 },
+      { name: '台中公園湖心亭', icon: '🌳', tag: '百年名勝', desc: '日月湖中雙頂紅色涼亭古蹟', x: -75, z: -210 },
+      { name: '國立自然科學博物館 (科博館)', icon: '🔬', tag: '文教展館', desc: '太空劇場銀球與熱帶植物園溫室', x: -2130, z: -2183 },
+      { name: '國立臺灣美術館 (國美館)', icon: '🎨', tag: '當代藝術', desc: '亞洲最大美術館之一與雕塑綠地', x: -2296, z: -341 },
+      { name: '臺中國家歌劇院', icon: '🎭', tag: '世界九大新地標', desc: '伊東豊雄曲牆美聲涵洞建築', x: -420, z: -150 },
+      { name: '大慶車站 (臺鐵/捷運共構)', icon: '🚆', tag: '捷運綠線', desc: '臺鐵與台中捷運高架共構轉乘樞紐', x: -3833, z: 2118 },
+      { name: '第二市場 (美食街/六角樓)', icon: '🍜', tag: '在地美食', desc: '百年老牌炒麵、東泉辣椒醬、菜頭粿', x: -195, z: 45 },
+      { name: '臺中市政府警察局第一分局', icon: '👮', tag: '執法重鎮', desc: '民權路與三民路口市警第一分局', x: -140, z: 142 },
+      { name: '亞洲大飯店 / 榮達大樓', icon: '🏢', tag: '中區地標', desc: '中區歷史摩天樓 · 175m 階梯塔樓', x: -159.6, z: -58.0 }
+    ];
+
+    list.forEach((lm) => {
+      const card = document.createElement('button');
+      card.className = 'teleport-item-card';
+      card.innerHTML = `
+        <div class="tp-card-header">
+          <span class="tp-card-icon">${lm.icon}</span>
+          <strong class="tp-card-name">${lm.name}</strong>
+          <span class="tp-card-tag">${lm.tag}</span>
+        </div>
+        <p class="tp-card-desc">${lm.desc}</p>
+      `;
+      card.addEventListener('click', () => {
+        this.teleportToCoords(lm.x, lm.z, lm.name);
+        this.closeTeleportModal();
+      });
+      grid.appendChild(card);
+    });
   }
 
   // 快速前往/切換台中各大地標 (精準吸附於地標正前方道路路網上，絕不穿入建築內部)

@@ -266,13 +266,9 @@
     <div class="mobile-actions-zone" id="mobile-actions-zone">
       <!-- 頂端次要操作按鈕 -->
       <div class="mobile-sub-row">
-        <button id="btn-m-settings" class="btn-m-pill" aria-label="系統設定">
-          <span class="m-icon">⚙️</span>
-          <span class="m-lbl">設定</span>
-        </button>
-        <button id="btn-m-fullscreen" class="btn-m-pill" aria-label="全螢幕切換">
-          <span class="m-icon">⛶</span>
-          <span class="m-lbl">全螢幕</span>
+        <button id="btn-m-teleport" class="btn-m-pill btn-m-teleport-pill" aria-label="地標傳送">
+          <span class="m-icon">📍</span>
+          <span class="m-lbl">傳送</span>
         </button>
         <button id="btn-m-map" class="btn-m-pill" aria-label="全屏地圖">
           <span class="m-icon">🗺️</span>
@@ -285,6 +281,14 @@
         <button id="btn-m-reset" class="btn-m-pill" aria-label="車輛翻正">
           <span class="m-icon">🔄</span>
           <span class="m-lbl">翻正</span>
+        </button>
+        <button id="btn-m-fullscreen" class="btn-m-pill" aria-label="全螢幕切換">
+          <span class="m-icon">⛶</span>
+          <span class="m-lbl">全螢幕</span>
+        </button>
+        <button id="btn-m-settings" class="btn-m-pill" aria-label="系統設定">
+          <span class="m-icon">⚙️</span>
+          <span class="m-lbl">設定</span>
         </button>
       </div>
 
@@ -567,6 +571,35 @@
             <div class="upgrade-desc">將茶葉蛋攜帶上限提升至 8 顆，續航力加倍！目前等級：<span id="lvl-egg">Lv.0 (3顆)</span></div>
           </div>
           <button class="btn-upgrade-action" id="btn-buy-egg" data-type="egg">擴容 ($8,000)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       臺中地標快速傳送選單 (Landmark Teleport Modal) [T]
+       ======================================================== -->
+  <div id="teleport-modal" class="game-modal-overlay hidden">
+    <div class="settings-card-panel teleport-panel">
+      <div class="modal-card-header">
+        <div class="modal-card-title">
+          <span>📍 臺中市區地標快速傳送 · CITY TELEPORT</span>
+        </div>
+        <button class="modal-card-close" id="btn-close-teleport">✕</button>
+      </div>
+
+      <div class="teleport-content">
+        <button class="teleport-quick-cycle-btn" id="btn-quick-next-landmark">
+          <span class="cycle-icon">⚡</span>
+          <div class="cycle-meta">
+            <strong>快速前往下一個地標 (↻)</strong>
+            <small>按順序巡迴臺中各大經典景點與車站</small>
+          </div>
+          <span class="cycle-arrow">▶</span>
+        </button>
+
+        <div class="teleport-grid" id="teleport-landmarks-grid">
+          <!-- JS 動態生成地標卡片 -->
         </div>
       </div>
     </div>
