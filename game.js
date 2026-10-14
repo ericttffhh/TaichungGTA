@@ -3677,6 +3677,14 @@ class NightMarketFoodSystem {
       g.position.set(cfg.x, 0, cfg.z);
       g.rotation.y = cfg.rotY;
 
+      // 0. 攤位防浮空專用仿木石板基座 (緊貼地面，杜絕飄空)
+      const basePlate = new THREE.Mesh(
+        new THREE.BoxGeometry(2.8, 0.08, 1.8),
+        new THREE.MeshStandardMaterial({ color: 0x4e342e, roughness: 0.9 })
+      );
+      basePlate.position.set(0, 0.04, 0);
+      g.add(basePlate);
+
       // 1. 木質不鏽鋼攤車
       const counter = new THREE.Mesh(
         new THREE.BoxGeometry(2.4, 0.9, 1.1),
@@ -3917,33 +3925,108 @@ class RailwayTrainSystem {
   }
 
   initRailwayTracks() {
-    // 臺鐵台中高架鐵路廊道 (豐原 ⇄ 台中車站 ⇄ 大慶 ⇄ 烏日)
+    // 臺鐵台中都會區鐵路高架化真實廊道 (太原 ⇄ 台中車站高架月台 ⇄ 五權 ⇄ 大慶 ⇄ 烏日)
+    // 穿過新站挑高鋼骨拱穹 (x: 4, z: 156)，沿著建國路後方專用路廊延伸，絕不跨越站前廣場與台灣大道
     this.traPath = [
-      new THREE.Vector3(120, 14.5, -450),
-      new THREE.Vector3(75, 14.5, 0),
-      new THREE.Vector3(-5, 14.5, 145),
-      new THREE.Vector3(-1200, 14.5, 780),
-      new THREE.Vector3(-2500, 14.5, 1450),
-      new THREE.Vector3(-3833.7, 14.5, 2118.2)
+      new THREE.Vector3(880, 14.5, -600),
+      new THREE.Vector3(620, 14.5, -380),
+      new THREE.Vector3(420, 14.5, -210),
+      new THREE.Vector3(260, 14.5, -70),
+      new THREE.Vector3(125, 14.5, 50),
+      new THREE.Vector3(4, 14.5, 156),         // 台中車站新高架站房月台核心 (穿過站體鋼骨拱穹)
+      new THREE.Vector3(-140, 14.5, 290),
+      new THREE.Vector3(-360, 14.5, 480),
+      new THREE.Vector3(-750, 14.5, 800),
+      new THREE.Vector3(-1500, 14.5, 1260),
+      new THREE.Vector3(-2600, 14.5, 1720),
+      new THREE.Vector3(-3833.7, 14.5, 2118.2) // 大慶高架車站 (台鐵/捷運共構)
     ];
 
-    // 台中捷運綠線高架廊道 (市政府 ⇄ 水安宮 ⇄ 文心森林 ⇄ 大慶)
+    // 台中捷運綠線高架廊道 (文心路高架走廊：市政府 ⇄ 水安宮 ⇄ 文心森林公園 ⇄ 大慶)
     this.mrtPath = [
-      new THREE.Vector3(-260, 15.5, -50),
-      new THREE.Vector3(-265, 15.5, 100),
-      new THREE.Vector3(-230, 15.5, 280),
-      new THREE.Vector3(-200, 15.5, 450),
-      new THREE.Vector3(-175, 15.5, 650)
+      new THREE.Vector3(-3833.7, 16.5, 2118.2), // 大慶站 (G13)
+      new THREE.Vector3(-3650, 16.5, 1450),
+      new THREE.Vector3(-3500, 16.5, 800),
+      new THREE.Vector3(-3380, 16.5, 150),
+      new THREE.Vector3(-3250, 16.5, -500),
+      new THREE.Vector3(-3150, 16.5, -1200)
     ];
 
-    this.buildViaduct(this.traPath, 0x455a64);
-    this.buildViaduct(this.mrtPath, 0x00897b);
+    this.buildViaduct(this.traPath, 'tra');
+    this.buildViaduct(this.mrtPath, 'mrt');
   }
 
-  buildViaduct(points, color) {
-    const trackMat = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.3 });
-    const pierMat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, roughness: 0.8 });
-    const railMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.3, metalness: 0.8 });
+  buildViaduct(points, type = 'tra') {
+    const isTRA = type === 'tra';
+
+    // 1. 高擬真土木工程材質 (專業工程配色，明亮高質感混凝土)
+    const deckMat = new THREE.MeshStandardMaterial({
+      color: isTRA ? 0xd0d5db : 0xd8dde2,
+      roughness: 0.65,
+      metalness: 0.1
+    });
+    const fasciaMat = new THREE.MeshStandardMaterial({
+      color: isTRA ? 0x78909c : 0x00897b,
+      roughness: 0.45,
+      metalness: 0.25
+    });
+    const barrierBaseMat = new THREE.MeshStandardMaterial({
+      color: isTRA ? 0xb0bec5 : 0x90a4ae,
+      roughness: 0.6,
+      metalness: 0.15
+    });
+    const soundPanelMat = new THREE.MeshStandardMaterial({
+      color: isTRA ? 0x546e7a : 0x00897b,
+      roughness: 0.4,
+      metalness: 0.3
+    });
+    const soundGlassMat = new THREE.MeshStandardMaterial({
+      color: 0x90caf9,
+      roughness: 0.1,
+      metalness: 0.8,
+      transparent: true,
+      opacity: 0.65
+    });
+    const ballastMat = new THREE.MeshStandardMaterial({
+      color: 0x2b3035,
+      roughness: 0.95,
+      metalness: 0.05
+    });
+    const sleeperMat = new THREE.MeshStandardMaterial({
+      color: 0xb0bec5,
+      roughness: 0.85,
+      metalness: 0.1
+    });
+    const railMat = new THREE.MeshStandardMaterial({
+      color: 0xe2e8f0,
+      roughness: 0.18,
+      metalness: 0.92
+    });
+    const pierMat = new THREE.MeshStandardMaterial({
+      color: 0xa6b1b9,
+      roughness: 0.75,
+      metalness: 0.1
+    });
+    const capMat = new THREE.MeshStandardMaterial({
+      color: 0x8a97a0,
+      roughness: 0.7,
+      metalness: 0.15
+    });
+    const bearingMat = new THREE.MeshStandardMaterial({
+      color: 0x212121,
+      roughness: 0.9
+    });
+    const catenarySteelMat = new THREE.MeshStandardMaterial({
+      color: 0x455a64,
+      roughness: 0.45,
+      metalness: 0.75
+    });
+    const insulatorMat = new THREE.MeshStandardMaterial({
+      color: 0xd84315,
+      roughness: 0.35,
+      metalness: 0.3
+    });
+    const wireMat = new THREE.MeshBasicMaterial({ color: 0x37474f });
 
     for (let i = 0; i < points.length - 1; i++) {
       const p1 = points[i];
@@ -3952,26 +4035,189 @@ class RailwayTrainSystem {
       const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
       const angle = Math.atan2(p2.x - p1.x, p2.z - p1.z);
 
-      const deck = new THREE.Mesh(new THREE.BoxGeometry(6.2, 1.2, dist), trackMat);
-      deck.position.set(mid.x, mid.y - 0.6, mid.z);
-      deck.rotation.y = angle;
-      this.scene.add(deck);
+      const segGroup = new THREE.Group();
+      segGroup.position.set(mid.x, mid.y, mid.z);
+      segGroup.rotation.y = angle;
 
-      [-1.2, 1.2].forEach(ox => {
-        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, dist), railMat);
-        rail.position.set(mid.x + Math.cos(angle) * ox, mid.y + 0.08, mid.z - Math.sin(angle) * ox);
-        rail.rotation.y = angle;
-        this.scene.add(rail);
+      // A. 預力混凝土連續箱型梁主體 (梯形截面 + 挑臂)
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(9.8, 0.42, dist), deckMat);
+      deck.position.set(0, -0.21, 0);
+      segGroup.add(deck);
+
+      [-1, 1].forEach(s => {
+        const wing = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.26, dist), deckMat);
+        wing.position.set(s * 5.5, -0.13, 0);
+        segGroup.add(wing);
+
+        const fascia = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.42, dist), fasciaMat);
+        fascia.position.set(s * 6.12, -0.14, 0);
+        segGroup.add(fascia);
       });
 
-      const steps = Math.max(1, Math.floor(dist / 45));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
+      const boxUpper = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.8, dist), deckMat);
+      boxUpper.position.set(0, -0.82, 0);
+      segGroup.add(boxUpper);
+
+      const boxLower = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.8, dist), deckMat);
+      boxLower.position.set(0, -1.62, 0);
+      segGroup.add(boxLower);
+
+      // B. 雙側隔音牆 (Parapet & Sound Barrier Walls)
+      [-1, 1].forEach(s => {
+        const barrierBase = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.65, dist), barrierBaseMat);
+        barrierBase.position.set(s * 6.0, 0.325, 0);
+        segGroup.add(barrierBase);
+
+        const soundPanel = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.45, dist), soundPanelMat);
+        soundPanel.position.set(s * 6.0, 1.375, 0);
+        segGroup.add(soundPanel);
+
+        const soundGlass = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.55, dist), soundGlassMat);
+        soundGlass.position.set(s * 6.0, 1.35, 0);
+        segGroup.add(soundGlass);
+
+        const topCap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, dist), catenarySteelMat);
+        topCap.position.set(s * 6.0, 2.14, 0);
+        segGroup.add(topCap);
+      });
+
+      // 隔音牆立柱 (每 6 米一根)
+      const postSteps = Math.max(1, Math.floor(dist / 6.0));
+      for (let p = 0; p <= postSteps; p++) {
+        const pz = -dist / 2 + (p / postSteps) * dist;
+        [-1, 1].forEach(s => {
+          const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.55, 0.16), catenarySteelMat);
+          post.position.set(s * 6.0, 1.42, pz);
+          segGroup.add(post);
+        });
+      }
+
+      // C. 碎石道碴床與維修走道
+      const ballast = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.18, dist), ballastMat);
+      ballast.position.set(0, 0.09, 0);
+      segGroup.add(ballast);
+
+      const walkway = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.06, dist), barrierBaseMat);
+      walkway.position.set(0, 0.17, 0);
+      segGroup.add(walkway);
+
+      // D. 雙線預力混凝土枕木 (PC Sleepers)
+      const sleeperSteps = Math.max(1, Math.floor(dist / 2.2));
+      const sleeperGeoms = [];
+      const singleSleeper = new THREE.BoxGeometry(2.35, 0.14, 0.24);
+
+      for (let sl = 0; sl <= sleeperSteps; sl++) {
+        const slz = -dist / 2 + (sl / sleeperSteps) * dist;
+        [-2.05, 2.05].forEach(ox => {
+          const sg = singleSleeper.clone();
+          sg.translate(ox, 0.18, slz);
+          sleeperGeoms.push(sg);
+        });
+      }
+
+      if (sleeperGeoms.length > 0) {
+        const mergedSleepers = BufferGeometryUtils.mergeGeometries(sleeperGeoms);
+        const sleeperMesh = new THREE.Mesh(mergedSleepers, sleeperMat);
+        segGroup.add(sleeperMesh);
+      }
+
+      // E. 雙線四軌 60kg 拋光鋼軌
+      [-2.05, 2.05].forEach(trackCenter => {
+        [-0.72, 0.72].forEach(gaugeOffset => {
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, dist), railMat);
+          rail.position.set(trackCenter + gaugeOffset, 0.31, 0);
+          segGroup.add(rail);
+        });
+      });
+
+      // 捷運綠線：添加 750V 第三軌
+      if (!isTRA) {
+        [-3.2, 3.2].forEach(tx => {
+          const thirdRail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, dist),
+            new THREE.MeshStandardMaterial({ color: 0xffd600, roughness: 0.3, metalness: 0.6 }));
+          thirdRail.position.set(tx, 0.35, 0);
+          segGroup.add(thirdRail);
+        });
+      }
+
+      // F. 門型電車線電桿鋼桁架與電網 (TRA 25kV 電氣化)
+      if (isTRA) {
+        const gantrySteps = Math.max(1, Math.floor(dist / 42.0));
+        for (let g = 0; g <= gantrySteps; g++) {
+          const gz = -dist / 2 + (g / gantrySteps) * dist;
+
+          [-5.3, 5.3].forEach(gx => {
+            const col = new THREE.Mesh(new THREE.BoxGeometry(0.26, 6.4, 0.26), catenarySteelMat);
+            col.position.set(gx, 3.2, gz);
+            segGroup.add(col);
+          });
+
+          const beamTop = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.32, 0.32), catenarySteelMat);
+          beamTop.position.set(0, 6.0, gz);
+          segGroup.add(beamTop);
+
+          const beamBottom = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.16, 0.16), catenarySteelMat);
+          beamBottom.position.set(0, 5.35, gz);
+          segGroup.add(beamBottom);
+
+          [-2.05, 2.05].forEach(tx => {
+            const dropArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), catenarySteelMat);
+            dropArm.position.set(tx, 5.2, gz);
+            segGroup.add(dropArm);
+
+            const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.45, 8), insulatorMat);
+            ins.position.set(tx, 4.65, gz);
+            segGroup.add(ins);
+          });
+        }
+
+        [-2.05, 2.05].forEach(tx => {
+          const contactWire = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, dist), wireMat);
+          contactWire.position.set(tx, 4.4, 0);
+          segGroup.add(contactWire);
+
+          const messengerWire = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, dist), wireMat);
+          messengerWire.position.set(tx, 5.4, 0);
+          segGroup.add(messengerWire);
+        });
+      }
+
+      this.scene.add(segGroup);
+
+      // G. 擬真八角雙柱式橋墩與橫梁帽梁
+      const pierSteps = Math.max(1, Math.floor(dist / 46.0));
+      for (let s = 0; s <= pierSteps; s++) {
+        const t = s / pierSteps;
         const px = p1.x + (p2.x - p1.x) * t;
         const pz = p1.z + (p2.z - p1.z) * t;
-        const pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, p1.y, 2.4), pierMat);
-        pier.position.set(px, p1.y / 2, pz);
-        this.scene.add(pier);
+        const pierH = p1.y - 1.8;
+
+        const pierGroup = new THREE.Group();
+        pierGroup.position.set(px, 0, pz);
+        pierGroup.rotation.y = angle;
+
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.4, 2.8), capMat);
+        cap.position.set(0, pierH - 0.7, 0);
+        pierGroup.add(cap);
+
+        [-2.4, -0.9, 0.9, 2.4].forEach(bx => {
+          const pad = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.16, 0.75), bearingMat);
+          pad.position.set(bx, pierH + 0.08, 0);
+          pierGroup.add(pad);
+        });
+
+        const colHeight = pierH - 1.4;
+        [-2.0, 2.0].forEach(cx => {
+          const col = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.25, colHeight, 8), pierMat);
+          col.position.set(cx, colHeight / 2, 0);
+          pierGroup.add(col);
+        });
+
+        const footing = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.6, 3.8), pierMat);
+        footing.position.set(0, 0.3, 0);
+        pierGroup.add(footing);
+
+        this.scene.add(pierGroup);
       }
     }
   }
@@ -3999,7 +4245,11 @@ class RailwayTrainSystem {
   }
 
   buildEMU900Train() {
+    const root = new THREE.Group();
     const trainGroup = new THREE.Group();
+    trainGroup.position.set(-2.05, 0.38, 0); // 嚴格平貼行駛在北上側軌道
+    root.add(trainGroup);
+
     const carLen = 14.0;
     const carW = 3.1;
     const carH = 3.4;
@@ -4041,10 +4291,24 @@ class RailwayTrainSystem {
       car.add(acUnit);
 
       if (carIdx === 0) {
-        const panto = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 1.8),
-          new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.4, metalness: 0.8 }));
-        panto.position.set(0, carH + 1.0, -2.5);
-        car.add(panto);
+        // 單臂菱形集電弓 (Pantograph - 正好接觸架空電車線)
+        const pantoGroup = new THREE.Group();
+        pantoGroup.position.set(0, carH + 0.4, -2.5);
+        const pantoMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.4, metalness: 0.8 });
+
+        const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 1.2), pantoMat);
+        pantoGroup.add(base);
+
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), pantoMat);
+        arm.position.set(0, 0.4, 0.2);
+        arm.rotation.x = -0.4;
+        pantoGroup.add(arm);
+
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.18), pantoMat);
+        shoe.position.set(0, 0.82, 0.35);
+        pantoGroup.add(shoe);
+
+        car.add(pantoGroup);
       }
 
       if (carIdx === 1) {
@@ -4075,11 +4339,15 @@ class RailwayTrainSystem {
       trainGroup.add(car);
     });
 
-    return trainGroup;
+    return root;
   }
 
   buildMRTTrain() {
+    const root = new THREE.Group();
     const mrtGroup = new THREE.Group();
+    mrtGroup.position.set(-2.05, 0.38, 0); // 行駛在捷運單側專用軌道
+    root.add(mrtGroup);
+
     const carLen = 12.0;
     const carW = 2.95;
     const carH = 3.2;
@@ -4133,7 +4401,7 @@ class RailwayTrainSystem {
       mrtGroup.add(car);
     });
 
-    return mrtGroup;
+    return root;
   }
 
   update(dt, activePos) {
