@@ -545,4 +545,360 @@ export function buildSupercar() {
   return finalize(car, 0.94);
 }
 
+// ---------------------------------------------------------------------------
+// 台灣經典三陽/中華藍色小貨車 (發財車)
+// ---------------------------------------------------------------------------
+export function buildTruck() {
+  const truck = new THREE.Group();
+  const W = 1.78;
+  const bluePaint = paintMaterial(0x1976d2); // 經典發財藍
+  const dark = darkMat();
+  const plastic = plasticMat();
+  const glass = glassMaterial();
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0xb07d4b, roughness: 0.85 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.5, metalness: 0.7 });
+
+  // 1. 車頭駕駛艙 (Cab)
+  const cabL = 1.45;
+  const cabZ = 1.15;
+  // 駕駛室外殼 (微弧箱型)
+  const cab = box(W, 1.25, cabL, bluePaint, 0, 0.98, cabZ);
+  truck.add(cab);
+
+  // 擋風玻璃 (大面積微斜)
+  const fWindshield = box(W * 0.88, 0.55, 0.08, glass, 0, 1.15, cabZ + cabL / 2 + 0.01);
+  fWindshield.rotation.x = -0.15;
+  truck.add(fWindshield);
+
+  // 兩側車窗
+  [-1, 1].forEach(s => {
+    truck.add(box(0.06, 0.45, 0.65, glass, s * (W / 2 + 0.01), 1.12, cabZ - 0.05));
+    // 車門把手 (黑色復古把手)
+    truck.add(box(0.04, 0.04, 0.16, dark, s * (W / 2 + 0.02), 0.88, cabZ - 0.2));
+    // 經典車門噴漆文字：「限乘 2 人 總重 1.95 噸」
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px "Noto Sans TC", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('限乘2人 總重1.95噸', 128, 32);
+    const doorTex = new THREE.CanvasTexture(c);
+    doorTex.colorSpace = THREE.SRGBColorSpace;
+    const doorMat = new THREE.MeshBasicMaterial({ map: doorTex, transparent: true });
+    const doorSign = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.18), doorMat);
+    doorSign.position.set(s * (W / 2 + 0.02), 0.75, cabZ - 0.1);
+    doorSign.rotation.y = s * Math.PI / 2;
+    truck.add(doorSign);
+
+    // 車頭兩側加長大後視鏡 (發財車招牌長臂鏡)
+    const arm = box(0.24, 0.02, 0.02, dark, s * (W / 2 + 0.12), 1.08, cabZ + 0.35);
+    truck.add(arm);
+    const mirror = box(0.04, 0.28, 0.14, dark, s * (W / 2 + 0.24), 1.08, cabZ + 0.35);
+    truck.add(mirror);
+    const mirrorGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.24),
+      new THREE.MeshStandardMaterial({ color: 0xdde5ed, roughness: 0.1, metalness: 0.9 }));
+    mirrorGlass.position.set(s * (W / 2 + 0.24) - s * 0.021, 1.08, cabZ + 0.35);
+    mirrorGlass.rotation.y = Math.PI;
+    truck.add(mirrorGlass);
+  });
+
+  // 雨刷 (雙刷)
+  [-0.3, 0.2].forEach(x => {
+    const wiper = box(0.35, 0.02, 0.02, dark, x, 0.96, cabZ + cabL / 2 + 0.04);
+    wiper.rotation.z = -0.3;
+    truck.add(wiper);
+  });
+
+  // 前黑色塑料保險桿 + 水箱護罩
+  truck.add(box(W * 1.02, 0.32, 0.18, plastic, 0, 0.48, cabZ + cabL / 2 + 0.08));
+  // 散熱格柵
+  for (let i = 0; i < 3; i++) {
+    truck.add(box(0.8, 0.02, 0.02, dark, 0, 0.52 + i * 0.06, cabZ + cabL / 2 + 0.18));
+  }
+  // 車頭廠徽 (金色菱形)
+  const badge = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.1, 4),
+    new THREE.MeshStandardMaterial({ color: 0xffd54f, metalness: 0.8, roughness: 0.2 }));
+  badge.rotation.x = Math.PI / 2;
+  badge.position.set(0, 0.72, cabZ + cabL / 2 + 0.09);
+  truck.add(badge);
+
+  // 大燈與方向燈 (方型復古燈具)
+  [-1, 1].forEach(s => {
+    // 方形大燈
+    truck.add(box(0.24, 0.18, 0.06,
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4d6, emissiveIntensity: 1.5 }),
+      s * 0.62, 0.52, cabZ + cabL / 2 + 0.18));
+    // 側邊琥珀色角燈
+    truck.add(box(0.08, 0.16, 0.06,
+      new THREE.MeshStandardMaterial({ color: 0xff9800, emissive: 0xff9800, emissiveIntensity: 1.2 }),
+      s * 0.78, 0.52, cabZ + cabL / 2 + 0.17));
+  });
+
+  // 前車牌
+  addPlate(truck, 'TD-3368', '#ffffff', '#111111', '#1976d2', 0, 0.38, cabZ + cabL / 2 + 0.18, 0);
+
+  // 2. 底盤大樑與傳動軸
+  const bedL = 2.45;
+  const bedZ = -0.8;
+  truck.add(box(0.9, 0.12, 4.4, metalMat, 0, 0.36, 0.1));
+  truck.add(box(0.08, 0.08, 3.2, metalMat, 0, 0.32, -0.2)); // 傳動軸
+  // 備胎 (懸掛在貨斗下方)
+  const spare = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.18, 16), dark);
+  spare.rotation.z = Math.PI / 2;
+  spare.position.set(0, 0.32, -1.5);
+  truck.add(spare);
+
+  // 3. 貨斗 (Flatbed with Drop Sides)
+  const bedW = W * 1.04;
+  // 貨斗底板 (鐵/木質)
+  truck.add(box(bedW, 0.08, bedL, woodMat, 0, 0.58, bedZ));
+  // 貨斗圍欄 (左右兩側活動木板/鐵板)
+  [-1, 1].forEach(s => {
+    truck.add(box(0.04, 0.32, bedL, bluePaint, s * (bedW / 2 - 0.02), 0.74, bedZ));
+    // 欄杆強化立柱
+    for (let k = -1; k <= 1; k++) {
+      truck.add(box(0.06, 0.36, 0.05, metalMat, s * (bedW / 2 - 0.01), 0.74, bedZ + k * 0.8));
+    }
+  });
+  // 貨斗前端護網 (防止貨物撞擊駕駛艙後玻璃)
+  truck.add(box(bedW * 0.92, 0.45, 0.04, metalMat, 0, 0.95, bedZ + bedL / 2 - 0.02));
+  // 貨斗尾門 (開關尾板)
+  truck.add(box(bedW, 0.32, 0.04, bluePaint, 0, 0.74, bedZ - bedL / 2 + 0.02));
+
+  // 4. 滿載台味貨物！ (農產菜籃、紙箱、鳳梨瓦楞箱)
+  const crateMatGreen = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.6 });
+  const crateMatRed = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.6 });
+  const boxMat = new THREE.MeshStandardMaterial({ color: 0xd7ccc8, roughness: 0.8 });
+
+  // 疊放的蔬果菜籃
+  truck.add(box(0.55, 0.32, 0.55, crateMatGreen, -0.4, 0.78, bedZ + 0.5));
+  truck.add(box(0.55, 0.32, 0.55, crateMatGreen, -0.4, 1.1, bedZ + 0.5));
+  truck.add(box(0.55, 0.32, 0.55, crateMatRed, 0.35, 0.78, bedZ + 0.5));
+
+  // 台中名產瓦楞紙箱 (東泉 / 太陽餅 標記)
+  const cartonC = document.createElement('canvas');
+  cartonC.width = 128; cartonC.height = 128;
+  const cctx = cartonC.getContext('2d');
+  cctx.fillStyle = '#c7a77b'; cctx.fillRect(0, 0, 128, 128);
+  cctx.fillStyle = '#b71c1c'; cctx.font = 'bold 20px sans-serif';
+  cctx.fillText('臺中特產', 16, 40);
+  cctx.font = '16px sans-serif';
+  cctx.fillText('易碎物品 ⬆', 16, 75);
+  const cartonTex = new THREE.CanvasTexture(cartonC);
+  const cartonMat = new THREE.MeshStandardMaterial({ map: cartonTex, roughness: 0.85 });
+
+  const cBox1 = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.5, 0.7), cartonMat);
+  cBox1.position.set(0.2, 0.88, bedZ - 0.3);
+  cBox1.rotation.y = 0.12;
+  truck.add(cBox1);
+
+  const cBox2 = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.42, 0.5), cartonMat);
+  cBox2.position.set(-0.35, 0.84, bedZ - 0.4);
+  truck.add(cBox2);
+
+  // 藍色防水帆布
+  const tarpMat = new THREE.MeshStandardMaterial({ color: 0x0d47a1, roughness: 0.7 });
+  const tarp = box(0.6, 0.28, 0.5, tarpMat, 0.3, 0.76, bedZ - 0.95);
+  tarp.rotation.y = -0.08;
+  truck.add(tarp);
+
+  // 5. 尾部車燈、擋泥板、車牌
+  [-1, 1].forEach(s => {
+    // 橫式三色尾燈 (紅/黃/白)
+    truck.add(box(0.28, 0.09, 0.04,
+      new THREE.MeshStandardMaterial({ color: 0xd32f2f, emissive: 0xd32f2f, emissiveIntensity: 1.5 }),
+      s * 0.65, 0.46, bedZ - bedL / 2 - 0.03));
+    // 復古後擋泥板 (黑色橡膠片帶紅色反光板)
+    truck.add(box(0.26, 0.28, 0.02, dark, s * 0.72, 0.3, -1.75));
+    truck.add(box(0.18, 0.04, 0.02,
+      new THREE.MeshStandardMaterial({ color: 0xff1744, emissive: 0xff1744, emissiveIntensity: 1.2 }),
+      s * 0.72, 0.22, -1.76));
+  });
+  // 後車牌
+  addPlate(truck, 'TD-3368', '#ffffff', '#111111', '#1976d2', 0, 0.45, bedZ - bedL / 2 - 0.04, Math.PI);
+
+  // 6. 輪胎 (前輪距 1.35, 後輪距 -1.25)
+  addWheels(truck, W * 0.94, [[-1, 1.35], [1, 1.35], [-1, -1.25], [1, -1.25]], 0.34, 0.22, {
+    spokes: 6, rimColor: 0xe0e0e0, dark: false, caliperColor: 0x757575
+  });
+
+  return finalize(truck, 0.96);
+}
+
+// ---------------------------------------------------------------------------
+// 臺中市公車 300 號 (快捷公車 / BRT 專用道客運)
+// ---------------------------------------------------------------------------
+export function buildBus() {
+  const bus = new THREE.Group();
+  const W = 2.25;
+  const L = 8.6;
+  const H = 2.45;
+
+  const whitePaint = paintMaterial(0xf5f7fa);
+  const busGreen = new THREE.MeshPhysicalMaterial({ color: 0x00897b, roughness: 0.3, metalness: 0.2 });
+  const busCyan = new THREE.MeshPhysicalMaterial({ color: 0x00bcd4, roughness: 0.3, metalness: 0.2 });
+  const glass = glassMaterial();
+  const dark = darkMat();
+
+  // 1. 公車長條主體 (流線微倒角)
+  const body = box(W, H, L, whitePaint, 0, H / 2 + 0.32, 0);
+  bus.add(body);
+
+  // 臺中綠川/柳川雙色躍動線條 (Sides Livery)
+  [-1, 1].forEach(s => {
+    // 綠色下飾條
+    bus.add(box(0.02, 0.28, L * 0.95, busGreen, s * (W / 2 + 0.012), 0.68, 0));
+    // 青綠波浪斜紋
+    bus.add(box(0.02, 0.16, L * 0.88, busCyan, s * (W / 2 + 0.014), 0.94, 0.2));
+
+    // 車身「臺中市公車」與「Taichung City Bus」文字水貼
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 96;
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#00695c';
+    ctx.font = 'bold 36px "Noto Sans TC", sans-serif';
+    ctx.fillText('臺中市公車 300', 30, 48);
+    ctx.font = 'bold 20px sans-serif';
+    ctx.fillStyle = '#00897b';
+    ctx.fillText('TAICHUNG CITY BUS · 臺灣大道專用道', 30, 78);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const signMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+    const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.45), signMat);
+    signMesh.position.set(s * (W / 2 + 0.016), 1.25, 0.2);
+    signMesh.rotation.y = s * Math.PI / 2;
+    bus.add(signMesh);
+
+    // 兩側長條景觀大車窗 (Dark Tinted Windows)
+    bus.add(box(0.03, 0.92, L * 0.82, glass, s * (W / 2 + 0.01), 1.95, -0.15));
+    // 窗柱隔欄
+    for (let k = -3; k <= 3; k++) {
+      bus.add(box(0.04, 0.94, 0.06, dark, s * (W / 2 + 0.012), 1.95, k * 0.95 - 0.15));
+    }
+
+    // 輪拱防撞黑飾條
+    bus.add(box(0.03, 0.08, 1.2, dark, s * (W / 2 + 0.01), 0.72, 2.75));
+    bus.add(box(0.03, 0.08, 1.2, dark, s * (W / 2 + 0.01), 0.72, -2.6));
+  });
+
+  // 右側雙片摺疊車門 (前後雙門)
+  [-1.6, 1.8].forEach(doorZ => {
+    // 門框
+    bus.add(box(0.03, 1.75, 1.05, dark, W / 2 + 0.018, 1.2, doorZ));
+    // 雙玻璃門扇
+    bus.add(box(0.04, 1.6, 0.46, glass, W / 2 + 0.02, 1.22, doorZ - 0.24));
+    bus.add(box(0.04, 1.6, 0.46, glass, W / 2 + 0.02, 1.22, doorZ + 0.24));
+    // 黃色安全踏板線
+    bus.add(box(0.04, 0.05, 1.05,
+      new THREE.MeshStandardMaterial({ color: 0xffeb3b, emissive: 0xffeb3b, emissiveIntensity: 0.8 }),
+      W / 2 + 0.02, 0.35, doorZ));
+  });
+
+  // 2. 車頭造型 (Front Face)
+  const frontZ = L / 2;
+  // 大面積彎曲前擋風玻璃
+  const frontWindshield = box(W * 0.94, 1.15, 0.08, glass, 0, 1.88, frontZ + 0.02);
+  frontWindshield.rotation.x = -0.06;
+  bus.add(frontWindshield);
+
+  // 車頭上方巨幅 LED 電子路線顯示牌 (LED Destination Sign)
+  const ledC = document.createElement('canvas');
+  ledC.width = 512; ledC.height = 128;
+  const lctx = ledC.getContext('2d');
+  lctx.fillStyle = '#0a0a0c'; lctx.fillRect(0, 0, 512, 128);
+  lctx.fillStyle = '#ff8f00'; lctx.font = 'bold 72px monospace';
+  lctx.textAlign = 'left';
+  lctx.fillText('300', 25, 90);
+  lctx.fillStyle = '#ffb300'; lctx.font = 'bold 36px "Noto Sans TC", sans-serif';
+  lctx.fillText('靜宜大學 ⇄ 臺中車站', 165, 82);
+  const ledTex = new THREE.CanvasTexture(ledC);
+  ledTex.colorSpace = THREE.SRGBColorSpace;
+  const ledMat = new THREE.MeshStandardMaterial({
+    map: ledTex, emissive: 0xffb300, emissiveMap: ledTex, emissiveIntensity: 1.4
+  });
+  const frontLED = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.38, 0.1), ledMat);
+  frontLED.position.set(0, 2.58, frontZ + 0.03);
+  bus.add(frontLED);
+
+  // 公車垂直矩陣前大燈 + 日行燈條
+  [-1, 1].forEach(s => {
+    // 燈罩座
+    bus.add(box(0.26, 0.48, 0.06, dark, s * 0.85, 0.72, frontZ + 0.04));
+    // 三顆垂直 LED 大燈
+    for (let k = 0; k < 3; k++) {
+      bus.add(box(0.18, 0.1, 0.04,
+        new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff4d6, emissiveIntensity: 1.8 }),
+        s * 0.85, 0.58 + k * 0.13, frontZ + 0.07));
+    }
+    // 側邊後視鏡 (大型客車雙層兔耳鏡)
+    const mirrorStem = box(0.35, 0.04, 0.04, dark, s * (W / 2 + 0.18), 2.3, frontZ - 0.2);
+    bus.add(mirrorStem);
+    const mirrorBox = box(0.08, 0.55, 0.18, dark, s * (W / 2 + 0.36), 2.1, frontZ - 0.2);
+    bus.add(mirrorBox);
+  });
+
+  // 前保險桿與前車牌
+  bus.add(box(W * 1.01, 0.28, 0.12, dark, 0, 0.42, frontZ + 0.06));
+  addPlate(bus, 'KKA-3000', '#ffffff', '#111111', '#00897b', 0, 0.42, frontZ + 0.13, 0);
+
+  // 3. 車頂冷氣空調機與通風逃生艙口 (Roof HVAC Units)
+  const acMat = new THREE.MeshStandardMaterial({ color: 0xe0e6ed, roughness: 0.4 });
+  // 前後雙冷氣機組
+  [-1.2, 1.8].forEach(acZ => {
+    bus.add(box(1.5, 0.28, 1.8, acMat, 0, H + 0.46, acZ));
+    // 黑色散熱進氣排柵
+    bus.add(box(1.2, 0.04, 0.8, dark, 0, H + 0.61, acZ));
+  });
+  // 車頂逃生天窗
+  bus.add(box(0.7, 0.06, 0.7, whitePaint, 0, H + 0.35, -2.8));
+
+  // 4. 車尾細節 (Rear Face)
+  const rearZ = -L / 2;
+  // 後景觀玻璃
+  bus.add(box(W * 0.85, 0.65, 0.06, glass, 0, 2.1, rearZ - 0.02));
+  // 車尾小型 LED 路線標示「300」
+  const rLedC = document.createElement('canvas');
+  rLedC.width = 128; rLedC.height = 64;
+  const rlctx = rLedC.getContext('2d');
+  rlctx.fillStyle = '#0a0a0c'; rlctx.fillRect(0, 0, 128, 64);
+  rlctx.fillStyle = '#ff8f00'; rlctx.font = 'bold 44px monospace';
+  rlctx.textAlign = 'center'; rlctx.textBaseline = 'middle';
+  rlctx.fillText('300', 64, 32);
+  const rLedTex = new THREE.CanvasTexture(rLedC);
+  const rLedMat = new THREE.MeshStandardMaterial({
+    map: rLedTex, emissive: 0xff8f00, emissiveMap: rLedTex, emissiveIntensity: 1.4
+  });
+  const rearLED = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 0.06), rLedMat);
+  rearLED.position.set(0, 2.62, rearZ - 0.02);
+  bus.add(rearLED);
+
+  // 車尾直立式三色尾燈條
+  [-1, 1].forEach(s => {
+    bus.add(box(0.12, 0.7, 0.05, dark, s * 0.95, 1.1, rearZ - 0.03));
+    // 煞車紅燈、方向燈黃、倒車白
+    bus.add(box(0.08, 0.26, 0.04,
+      new THREE.MeshStandardMaterial({ color: 0xff1744, emissive: 0xff1744, emissiveIntensity: 1.6 }),
+      s * 0.95, 1.28, rearZ - 0.05));
+    bus.add(box(0.08, 0.16, 0.04,
+      new THREE.MeshStandardMaterial({ color: 0xff9800, emissive: 0xff9800, emissiveIntensity: 1.2 }),
+      s * 0.95, 1.05, rearZ - 0.05));
+    bus.add(box(0.08, 0.14, 0.04,
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 1.0 }),
+      s * 0.95, 0.88, rearZ - 0.05));
+  });
+
+  // 後車牌
+  addPlate(bus, 'KKA-3000', '#ffffff', '#111111', '#00897b', 0, 0.52, rearZ - 0.04, Math.PI);
+
+  // 5. 大型客車車輪 (前輪單軸，後輪雙軸或長輪距)
+  // 前輪 Z: 2.75, 後輪 Z: -2.6
+  addWheels(bus, W * 0.96, [[-1, 2.75], [1, 2.75], [-1, -2.6], [1, -2.6]], 0.48, 0.32, {
+    spokes: 8, rimColor: 0xdde2e6, dark: false, caliperColor: 0x455a64
+  });
+
+  return finalize(bus, 0.86);
+}
+
 export { createWheel as buildDetailedWheel };
+

@@ -195,6 +195,7 @@
         <span id="gps-target-name">台中火車站</span>
         <span class="gps-dist" id="gps-dist-val">(120 公尺)</span>
       </div>
+      <div class="food-near-hint hidden" id="food-near-hint">🍢 抵達夜市小吃攤！按 [E] 購買台中道地美食！</div>
     </div>
 
     <!-- 左下角雷達小地圖 -->
@@ -232,13 +233,14 @@
 
       <button class="helper-btn btn-act-mission" id="btn-mission"><kbd>Q</kbd> 接單/副業</button>
       <button class="helper-btn btn-act-shop" id="btn-shop"><kbd>U</kbd> 改裝工坊</button>
+      <button class="helper-btn btn-act-weather" id="btn-weather"><kbd>K</kbd> ⛈️ 天氣</button>
+      <button class="helper-btn btn-act-food" id="btn-food"><kbd>E</kbd> 🍢 夜市小吃</button>
       <button class="helper-btn btn-act-shoot" id="btn-shoot"><kbd>J</kbd> 鳴槍</button>
       <button class="helper-btn btn-act-horn" id="btn-horn"><kbd>H</kbd> 喇叭</button>
       <button class="helper-btn btn-act-radio" id="btn-radio"><kbd>N</kbd> 電台</button>
       <button class="helper-btn btn-act-landmark" id="btn-landmark"><kbd>T</kbd> 傳送</button>
       <button class="helper-btn btn-act-map" id="btn-open-map"><kbd>M</kbd> 地圖</button>
       <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> <span id="btn-veh-txt">下車</span></button>
-      <button class="helper-btn btn-act-eat" id="btn-eat"><kbd>E</kbd> 補血</button>
       <button class="helper-btn btn-act-reset" id="btn-reset"><kbd>R</kbd> 翻正</button>
       <button class="helper-btn btn-act-settings" id="btn-settings"><kbd>O</kbd> 設定</button>
     </div>
@@ -269,6 +271,14 @@
         <button id="btn-m-teleport" class="btn-m-pill btn-m-teleport-pill" aria-label="地標傳送">
           <span class="m-icon">📍</span>
           <span class="m-lbl">傳送</span>
+        </button>
+        <button id="btn-m-weather" class="btn-m-pill" aria-label="天氣切換">
+          <span class="m-icon">⛈️</span>
+          <span class="m-lbl">天氣</span>
+        </button>
+        <button id="btn-m-food" class="btn-m-pill" aria-label="夜市小吃">
+          <span class="m-icon">🍢</span>
+          <span class="m-lbl">小吃</span>
         </button>
         <button id="btn-m-map" class="btn-m-pill" aria-label="全屏地圖">
           <span class="m-icon">🗺️</span>
@@ -600,6 +610,32 @@
 
         <div class="teleport-grid" id="teleport-landmarks-grid">
           <!-- JS 動態生成地標卡片 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       台中在地夜市美食小吃攤彈窗 (Night Market Food Stall Modal)
+       ======================================================== -->
+  <div id="food-modal" class="game-modal-overlay hidden">
+    <div class="settings-card-panel food-panel">
+      <div class="modal-card-header">
+        <div class="modal-card-title">
+          <span>🍢 臺中夜市在地美食小吃攤 · NIGHT MARKET DELICACIES</span>
+        </div>
+        <button class="modal-card-close" id="btn-close-food">✕</button>
+      </div>
+
+      <div class="food-modal-body">
+        <div class="workshop-cash-tag">
+          <span>手頭現金：</span>
+          <strong id="food-current-cash">$88,888</strong>
+          <span class="food-sub-tip">（大麵羹、逢甲大腸包小腸、東泉大麵炒、豪大雞排補血加成！）</span>
+        </div>
+
+        <div class="food-items-container" id="food-items-container">
+          <!-- JS 動態生成食物卡片 -->
         </div>
       </div>
     </div>

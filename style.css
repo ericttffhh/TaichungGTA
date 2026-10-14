@@ -2806,3 +2806,169 @@ body.touch-device .hud-controls-helper {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================================
+   夜市美食攤 (Night Market Food Stall) & 天氣切換 UI
+   ============================================================================ */
+.food-near-hint {
+  margin-top: 6px;
+  background: linear-gradient(135deg, rgba(211, 47, 47, 0.92), rgba(245, 124, 0, 0.92));
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(211, 47, 47, 0.6);
+  border: 1px solid rgba(255, 235, 59, 0.8);
+  animation: pulseFoodHint 1.4s infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes pulseFoodHint {
+  from { transform: scale(1.0); }
+  to { transform: scale(1.04); }
+}
+
+.food-panel {
+  max-width: 680px;
+  width: 94vw;
+  background: linear-gradient(175deg, rgba(24, 18, 16, 0.98), rgba(16, 12, 10, 0.98));
+  border: 1.5px solid rgba(245, 124, 0, 0.6);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.8), 0 0 24px rgba(245, 124, 0, 0.25);
+}
+
+.food-modal-body {
+  padding: 16px 20px 22px 20px;
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+.food-sub-tip {
+  display: block;
+  font-size: 11.5px;
+  color: rgba(255, 235, 59, 0.85);
+  font-weight: normal;
+  margin-top: 4px;
+}
+
+.food-items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.food-item-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(36, 26, 22, 0.85);
+  border: 1px solid rgba(255, 112, 67, 0.35);
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.food-item-card:hover {
+  background: rgba(48, 34, 28, 0.95);
+  border-color: rgba(255, 171, 64, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.food-icon-box {
+  width: 52px;
+  height: 52px;
+  background: linear-gradient(135deg, rgba(211, 47, 47, 0.35), rgba(245, 124, 0, 0.35));
+  border: 1px solid rgba(255, 171, 64, 0.5);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  flex-shrink: 0;
+}
+
+.food-card-body {
+  flex: 1;
+}
+
+.food-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.food-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.food-tag {
+  font-size: 10.5px;
+  background: rgba(211, 47, 47, 0.4);
+  color: #ff8a80;
+  border: 1px solid rgba(255, 82, 82, 0.6);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.food-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffd54f;
+  margin-left: auto;
+}
+
+.food-desc {
+  margin: 0 0 6px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.35;
+}
+
+.food-buff-tag {
+  font-size: 11px;
+  color: #69f0ae;
+  font-weight: 600;
+}
+
+.btn-buy-food {
+  background: linear-gradient(135deg, #e65100, #ff8f00);
+  color: #fff;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(230, 81, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.btn-buy-food:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f57c00, #ffa000);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(230, 81, 0, 0.6);
+}
+
+.btn-buy-food:disabled {
+  background: #424242;
+  color: #9e9e9e;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-act-weather {
+  background: linear-gradient(135deg, rgba(38, 50, 56, 0.9), rgba(55, 71, 79, 0.9));
+  border-color: rgba(144, 202, 249, 0.6);
+}
+
+.btn-act-food {
+  background: linear-gradient(135deg, rgba(183, 28, 28, 0.9), rgba(230, 81, 0, 0.9));
+  border-color: rgba(255, 213, 79, 0.7);
+}
+

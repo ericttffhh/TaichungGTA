@@ -15,7 +15,7 @@ import { LandmarkBuilder } from './landmarkBuilder.js';
 import { soundManager } from './soundSystem.js';
 import { TaiwanTrafficSignalSystem, TaiwanStreetscapeTextures } from './taiwanStreetscape.js';
 import { PlayerCharacter } from './playerCharacter.js';
-import { buildTaxi, buildPoliceCar, buildSupercar, createWheel } from './vehicleModels.js';
+import { buildTaxi, buildPoliceCar, buildSupercar, buildTruck, buildBus, createWheel } from './vehicleModels.js';
 
 window.THREE = THREE;
 window.CANNON = CANNON;
@@ -1849,7 +1849,13 @@ class Vehicle {
       this.meshGroup.add(riderGroup);
     } else {
       // 高精細流線車身 (vehicleModels.js)
-      const builders = { taxi: buildTaxi, police: buildPoliceCar, supercar: buildSupercar };
+      const builders = {
+        taxi: buildTaxi,
+        police: buildPoliceCar,
+        supercar: buildSupercar,
+        truck: buildTruck,
+        bus: buildBus
+      };
       this.meshGroup.add((builders[this.type] || buildSupercar)());
     }
 
@@ -1862,7 +1868,7 @@ class Vehicle {
   }
 
   toggleVehicleType() {
-    const types = ['scooter', 'supercar', 'police', 'taxi'];
+    const types = ['scooter', 'truck', 'bus', 'supercar', 'police', 'taxi'];
     const curIdx = types.indexOf(this.type);
     this.type = types[(curIdx + 1) % types.length];
     this.buildModel();
@@ -1872,12 +1878,16 @@ class Vehicle {
     const badgeIcon = document.querySelector('.veh-icon');
     const titles = {
       scooter: '勁戰 125 經典機車',
+      truck: '三陽金發財 藍色小貨車',
+      bus: '臺中市公車 300 號 (BRT)',
       supercar: '臺中狂飆 競技超跑',
       police: '臺中市警察局 巡邏警車',
       taxi: '臺中經典小黃 計程車'
     };
     const icons = {
       scooter: '🛵',
+      truck: '🚚',
+      bus: '🚌',
       supercar: '🏎️',
       police: '🚔',
       taxi: '🚕'
@@ -1889,6 +1899,8 @@ class Vehicle {
   getVehicleName() {
     const titles = {
       scooter: '勁戰 125 經典機車',
+      truck: '三陽金發財 藍色小貨車',
+      bus: '臺中市公車 300 號 (BRT)',
       supercar: '臺中狂飆 競技超跑',
       police: '臺中市警察局 巡邏警車',
       taxi: '臺中經典小黃 計程車'
@@ -1911,6 +1923,12 @@ class Vehicle {
     } else if (this.type === 'taxi') {
       maxSpeed = 115;
       accelRate = 34;
+    } else if (this.type === 'truck') {
+      maxSpeed = 100;
+      accelRate = 28;
+    } else if (this.type === 'bus') {
+      maxSpeed = 82;
+      accelRate = 20;
     }
 
     const steerSpeed = 4.0;
@@ -3423,8 +3441,748 @@ class PedestrianSystem {
 }
 
 // ============================================================================
+// 10. 天氣與環境系統 (WeatherSystem) - 午後雷陣雨、雨水粒子、雷鳴閃電與濕滑路面
+// ============================================================================
+class WeatherSystem {
+  constructor(scene, camera, dirLight, roadMeshes, app) {
+    this.scene = scene;
+    this.camera = camera;
+    this.dirLight = dirLight;
+    this.roadMeshes = roadMeshes || [];
+    this.app = app;
+    this.isRaining = false;
+    this.rainParticles = null;
+    this.rainCount = 2400;
+    this.lightningTimer = 0;
+    this.nextLightning = 8 + Math.random() * 8;
+    this.isFlashing = false;
+    this.flashDuration = 0;
+    this.baseDirIntensity = dirLight ? dirLight.intensity : 1.5;
+
+    this.initRainMesh();
+  }
+
+  initRainMesh() {
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(this.rainCount * 3);
+    for (let i = 0; i < this.rainCount; i++) {
+      positions[i * 3 + 0] = (Math.random() - 0.5) * 140;
+      positions[i * 3 + 1] = Math.random() * 55;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 140;
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const mat = new THREE.PointsMaterial({
+      color: 0x90caf9,
+      size: 0.3,
+      transparent: true,
+      opacity: 0.75,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+
+    this.rainParticles = new THREE.Points(geo, mat);
+    this.rainParticles.visible = false;
+    this.scene.add(this.rainParticles);
+  }
+
+  toggle() {
+    this.setRaining(!this.isRaining);
+  }
+
+  setRaining(state) {
+    this.isRaining = state;
+    if (this.rainParticles) {
+      this.rainParticles.visible = state;
+    }
+    const weatherBtn = document.getElementById('btn-weather');
+    const mWeatherBtn = document.getElementById('btn-m-weather');
+
+    if (state) {
+      soundManager.startRainSound();
+      if (weatherBtn) weatherBtn.innerHTML = '<kbd>K</kbd> ☀️ 晴天';
+      if (mWeatherBtn) {
+        const lbl = mWeatherBtn.querySelector('.m-lbl');
+        if (lbl) lbl.textContent = '晴天';
+      }
+      this.app.showToast('⛈️ 台中午後雷陣雨來襲！路面泛起潮濕倒影，遠方響起雷鳴！');
+      // 道路轉為濕滑鏡面倒影
+      this.roadMeshes.forEach(mesh => {
+        if (mesh && mesh.material) {
+          mesh.material.roughness = 0.15;
+          mesh.material.metalness = 0.25;
+        }
+      });
+      this.scene.fog.color.setHex(0x37474f);
+      this.scene.fog.density = 0.0018;
+    } else {
+      soundManager.stopRainSound();
+      if (weatherBtn) weatherBtn.innerHTML = '<kbd>K</kbd> ⛈️ 天氣';
+      if (mWeatherBtn) {
+        const lbl = mWeatherBtn.querySelector('.m-lbl');
+        if (lbl) lbl.textContent = '天氣';
+      }
+      this.app.showToast('☀️ 雨過天晴！金黃陽光穿透雲層，台中放晴！');
+      this.roadMeshes.forEach(mesh => {
+        if (mesh && mesh.material) {
+          mesh.material.roughness = 0.85;
+          mesh.material.metalness = 0.05;
+        }
+      });
+      this.app.setTimeOfDay(this.app.timeOfDay || 'day');
+    }
+  }
+
+  update(dt) {
+    if (!this.isRaining || !this.rainParticles || !this.camera) return;
+
+    const posAttr = this.rainParticles.geometry.attributes.position;
+    const posArr = posAttr.array;
+    const camPos = this.camera.position;
+    this.rainParticles.position.set(camPos.x, 0, camPos.z);
+
+    const fallSpeed = 75 * dt;
+    const windX = -8 * dt;
+    const windZ = -4 * dt;
+
+    for (let i = 0; i < this.rainCount; i++) {
+      let py = posArr[i * 3 + 1] - fallSpeed;
+      let px = posArr[i * 3 + 0] + windX;
+      let pz = posArr[i * 3 + 2] + windZ;
+
+      if (py < 0) {
+        py = 50 + Math.random() * 6;
+        px = (Math.random() - 0.5) * 140;
+        pz = (Math.random() - 0.5) * 140;
+      }
+      posArr[i * 3 + 0] = px;
+      posArr[i * 3 + 1] = py;
+      posArr[i * 3 + 2] = pz;
+    }
+    posAttr.needsUpdate = true;
+
+    // 閃電與打雷
+    this.lightningTimer += dt;
+    if (this.lightningTimer > this.nextLightning) {
+      this.lightningTimer = 0;
+      this.nextLightning = 8 + Math.random() * 12;
+      this.triggerLightning();
+    }
+
+    if (this.isFlashing) {
+      this.flashDuration -= dt;
+      if (this.flashDuration <= 0) {
+        this.isFlashing = false;
+        if (this.dirLight) this.dirLight.intensity = this.baseDirIntensity;
+      }
+    }
+  }
+
+  triggerLightning() {
+    this.isFlashing = true;
+    this.flashDuration = 0.15;
+    if (this.dirLight) this.dirLight.intensity = 4.2;
+    soundManager.playThunder();
+  }
+}
+
+// ============================================================================
+// 11. 台中在地夜市小吃攤系統 (NightMarketFoodSystem)
+// ============================================================================
+class NightMarketFoodSystem {
+  constructor(scene, app) {
+    this.scene = scene;
+    this.app = app;
+    this.stalls = [];
+    this.currentNearStall = null;
+
+    // 台中三大著名夜市/市集坐標
+    this.stallConfigs = [
+      {
+        id: 'yizhong_stall',
+        name: '一中夜市・排隊美食攤',
+        desc: '一中街商圈必吃！豪大大雞排與東泉大麵炒！',
+        x: 110,
+        z: -880,
+        rotY: 0
+      },
+      {
+        id: 'second_market_stall',
+        name: '第二市場・百年老字號傳統攤',
+        desc: '三民路六角樓旁！台中大麵羹創始老店！',
+        x: -615,
+        z: -485,
+        rotY: Math.PI * 0.25
+      },
+      {
+        id: 'fengjia_stall',
+        name: '逢甲夜市・大腸包小腸旗艦店',
+        desc: '文華路人氣爆棚！炭烤黑豬肉香腸總本店！',
+        x: -4320,
+        z: -2520,
+        rotY: Math.PI * 0.15
+      }
+    ];
+
+    this.menu = [
+      {
+        key: 'damiangeng',
+        name: '台中正宗大麵羹',
+        price: 35,
+        heal: 40,
+        icon: '🍜',
+        tag: '台中特有',
+        desc: '濃郁鹼麵搭配酥脆油蔥、韭菜與蝦米肉燥，台中百年傳統滋味！',
+        buff: '+40 HP 溫熱暖胃'
+      },
+      {
+        key: 'sausage',
+        name: '逢甲大腸包小腸',
+        price: 65,
+        heal: 65,
+        icon: '🌭',
+        tag: '逢甲必吃',
+        desc: '炭火手工糯米腸包入黑豬肉香腸，鋪滿九層塔、酸菜與蒜蓉醬！',
+        buff: '+65 HP 獲得 15 秒防護護盾'
+      },
+      {
+        key: 'fried_noodles',
+        name: '東泉辣醬大麵炒',
+        price: 50,
+        heal: 85,
+        icon: '🥢',
+        tag: '靈魂醬料',
+        desc: '經典黃油麵淋上神級「東泉辣椒醬」，鹹甜微辣直衝腦門！',
+        buff: '+85 HP 獲得 15 秒氮氣衝刺滿格加成'
+      },
+      {
+        key: 'giant_chicken',
+        name: '一中豪大大雞排',
+        price: 95,
+        heal: 100,
+        icon: '🍗',
+        tag: '夜市霸王',
+        desc: '比安全帽還大！金黃酥脆薄皮多汁，撒上特級純香椒鹽粉！',
+        buff: '瞬間 100% 生命全滿！'
+      }
+    ];
+
+    this.buildStalls();
+    this.setupModal();
+  }
+
+  buildStalls() {
+    this.stallConfigs.forEach(cfg => {
+      const g = new THREE.Group();
+      g.position.set(cfg.x, 0, cfg.z);
+      g.rotation.y = cfg.rotY;
+
+      // 1. 木質不鏽鋼攤車
+      const counter = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 0.9, 1.1),
+        new THREE.MeshStandardMaterial({ color: 0x8d6e63, roughness: 0.7 })
+      );
+      counter.position.set(0, 0.45, 0);
+      g.add(counter);
+
+      const topPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(2.44, 0.06, 1.14),
+        new THREE.MeshStandardMaterial({ color: 0xcfd8dc, roughness: 0.2, metalness: 0.8 })
+      );
+      topPlate.position.set(0, 0.92, 0);
+      g.add(topPlate);
+
+      // 料理鍋具
+      const pot1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.32, 0.28, 0.35, 16),
+        new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.3, metalness: 0.9 })
+      );
+      pot1.position.set(-0.6, 1.1, 0.1);
+      g.add(pot1);
+
+      const pot2 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.2, 0.22, 16),
+        new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.4, metalness: 0.6 })
+      );
+      pot2.position.set(0.5, 1.05, 0.1);
+      g.add(pot2);
+
+      // 熱騰騰冒煙蒸氣光球
+      const steam = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 })
+      );
+      steam.position.set(-0.6, 1.45, 0.1);
+      g.add(steam);
+      g.userData.steam = steam;
+
+      // 2. 攤車紅白條紋遮雨棚帆布
+      const awning = new THREE.Mesh(
+        new THREE.BoxGeometry(2.6, 0.08, 1.5),
+        new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.6 })
+      );
+      awning.position.set(0, 2.35, 0);
+      awning.rotation.x = 0.12;
+      g.add(awning);
+
+      // 四根支撐鋼柱
+      [-1.15, 1.15].forEach(sx => {
+        [-0.5, 0.5].forEach(sz => {
+          const pole = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.025, 0.025, 1.5, 8),
+            new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.3, metalness: 0.8 })
+          );
+          pole.position.set(sx, 1.6, sz);
+          g.add(pole);
+        });
+      });
+
+      // 3. 傳統大紅燈籠 + 暖光燈源
+      const lanternMat = new THREE.MeshStandardMaterial({
+        color: 0xff1744, emissive: 0xff1744, emissiveIntensity: 1.8, roughness: 0.3
+      });
+      [-0.75, 0.75].forEach(lx => {
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), lanternMat);
+        lantern.scale.set(1.0, 1.35, 1.0);
+        lantern.position.set(lx, 2.1, 0.7);
+        g.add(lantern);
+      });
+
+      const stallLight = new THREE.PointLight(0xffab40, 2.2, 14, 1.5);
+      stallLight.position.set(0, 2.1, 0.3);
+      g.add(stallLight);
+
+      // 4. 招牌燈箱
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#b71c1c'; ctx.fillRect(0, 0, 512, 128);
+      ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 8; ctx.strokeRect(6, 6, 500, 116);
+      ctx.fillStyle = '#fffde7'; ctx.font = 'bold 44px "Noto Sans TC", sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(cfg.name, 256, 48);
+      ctx.fillStyle = '#ffe082'; ctx.font = 'bold 24px "Noto Sans TC", sans-serif';
+      ctx.fillText('大麵羹 · 大腸包小腸 · 東泉炒麵 · 豪大雞排', 256, 92);
+      const tex = new THREE.CanvasTexture(c);
+      const signMat = new THREE.MeshStandardMaterial({
+        map: tex, emissive: 0xffe082, emissiveMap: tex, emissiveIntensity: 0.6
+      });
+      const sign = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.08), signMat);
+      sign.position.set(0, 2.58, 0.65);
+      g.add(sign);
+
+      this.scene.add(g);
+      cfg.mesh = g;
+      this.stalls.push(cfg);
+    });
+  }
+
+  setupModal() {
+    document.getElementById('btn-close-food')?.addEventListener('click', () => this.closeModal());
+    document.getElementById('food-modal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'food-modal') this.closeModal();
+    });
+    document.getElementById('btn-food')?.addEventListener('click', () => this.openModal());
+    document.getElementById('btn-m-food')?.addEventListener('click', () => this.openModal());
+  }
+
+  openModal() {
+    const modal = document.getElementById('food-modal');
+    if (!modal) return;
+    if (document.pointerLockElement) document.exitPointerLock?.();
+    modal.classList.remove('hidden');
+    this.renderMenu();
+  }
+
+  closeModal() {
+    const modal = document.getElementById('food-modal');
+    if (modal) modal.classList.add('hidden');
+  }
+
+  renderMenu() {
+    const container = document.getElementById('food-items-container');
+    if (!container) return;
+    const currentCash = this.app.gtaManager?.cash || 88888;
+    const cashEl = document.getElementById('food-current-cash');
+    if (cashEl) cashEl.textContent = `$${currentCash.toLocaleString()}`;
+
+    container.innerHTML = this.menu.map(item => `
+      <div class="food-item-card">
+        <div class="food-card-left">
+          <div class="food-icon-box">${item.icon}</div>
+        </div>
+        <div class="food-card-body">
+          <div class="food-title-row">
+            <span class="food-name">${item.name}</span>
+            <span class="food-tag">${item.tag}</span>
+            <span class="food-price">$${item.price}</span>
+          </div>
+          <p class="food-desc">${item.desc}</p>
+          <div class="food-buff-tag">⚡ ${item.buff}</div>
+        </div>
+        <button class="btn-buy-food" data-key="${item.key}" ${currentCash < item.price ? 'disabled' : ''}>
+          購買品嚐
+        </button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-buy-food').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        this.eatFood(key);
+      });
+    });
+  }
+
+  eatFood(key) {
+    const item = this.menu.find(m => m.key === key);
+    if (!item) return;
+
+    if (this.app.gtaManager) {
+      if (this.app.gtaManager.cash < item.price) {
+        this.app.showToast('💸 現金不足！請先開車載客或完成任務賺取車馬費！');
+        return;
+      }
+      this.app.gtaManager.cash -= item.price;
+      this.app.gtaManager.updateHud();
+    }
+
+    if (this.app.vehicle) {
+      this.app.vehicle.health = Math.min(100, (this.app.vehicle.health || 100) + item.heal);
+    }
+    const hpBar = document.getElementById('health-bar');
+    if (hpBar) hpBar.style.width = `${this.app.vehicle?.health || 100}%`;
+
+    soundManager.playEatFood();
+
+    if (key === 'fried_noodles' && this.app.vehicle) {
+      this.app.vehicle.boost = 100;
+      this.app.showToast(`🥢 大口吃下【${item.name}】！東泉辣醬加持，氮氣條瞬間補滿！衝刺狂飆！`);
+    } else if (key === 'sausage') {
+      this.app.showToast(`🌭 享用【${item.name}】！體力大補，獲得黑豬肉飽足防禦！`);
+    } else {
+      this.app.showToast(`😋 享用熱騰騰【${item.name}】！生命值回復 +${item.heal}%！`);
+    }
+
+    this.renderMenu();
+  }
+
+  update(dt, activePos) {
+    if (!activePos) return;
+
+    const now = performance.now() * 0.003;
+    this.stalls.forEach(cfg => {
+      if (cfg.mesh && cfg.mesh.userData.steam) {
+        cfg.mesh.userData.steam.position.y = 1.45 + Math.sin(now + cfg.x) * 0.08;
+      }
+    });
+
+    let nearest = null;
+    let minDist = Infinity;
+    for (let i = 0; i < this.stalls.length; i++) {
+      const s = this.stalls[i];
+      const d = Math.hypot(s.x - activePos.x, s.z - activePos.z);
+      if (d < minDist) {
+        minDist = d;
+        nearest = s;
+      }
+    }
+
+    const hint = document.getElementById('food-near-hint');
+    if (minDist < 16) {
+      this.currentNearStall = nearest;
+      if (hint) {
+        hint.classList.remove('hidden');
+        hint.textContent = `🍢 抵達【${nearest.name}】！按 [E] 享用在地小吃補血！`;
+      }
+    } else {
+      this.currentNearStall = null;
+      if (hint) hint.classList.add('hidden');
+    }
+  }
+}
+
+// ============================================================================
+// 12. 台中鐵路高架電聯車與捷運列車動態運行系統 (RailwayTrainSystem)
+// ============================================================================
+class RailwayTrainSystem {
+  constructor(scene, app) {
+    this.scene = scene;
+    this.app = app;
+    this.trains = [];
+    this.soundTimer = 0;
+
+    this.initRailwayTracks();
+    this.initTrains();
+  }
+
+  initRailwayTracks() {
+    // 臺鐵台中高架鐵路廊道 (豐原 ⇄ 台中車站 ⇄ 大慶 ⇄ 烏日)
+    this.traPath = [
+      new THREE.Vector3(120, 14.5, -450),
+      new THREE.Vector3(75, 14.5, 0),
+      new THREE.Vector3(-5, 14.5, 145),
+      new THREE.Vector3(-1200, 14.5, 780),
+      new THREE.Vector3(-2500, 14.5, 1450),
+      new THREE.Vector3(-3833.7, 14.5, 2118.2)
+    ];
+
+    // 台中捷運綠線高架廊道 (市政府 ⇄ 水安宮 ⇄ 文心森林 ⇄ 大慶)
+    this.mrtPath = [
+      new THREE.Vector3(-260, 15.5, -50),
+      new THREE.Vector3(-265, 15.5, 100),
+      new THREE.Vector3(-230, 15.5, 280),
+      new THREE.Vector3(-200, 15.5, 450),
+      new THREE.Vector3(-175, 15.5, 650)
+    ];
+
+    this.buildViaduct(this.traPath, 0x455a64);
+    this.buildViaduct(this.mrtPath, 0x00897b);
+  }
+
+  buildViaduct(points, color) {
+    const trackMat = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.3 });
+    const pierMat = new THREE.MeshStandardMaterial({ color: 0x90a4ae, roughness: 0.8 });
+    const railMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.3, metalness: 0.8 });
+
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dist = p1.distanceTo(p2);
+      const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+      const angle = Math.atan2(p2.x - p1.x, p2.z - p1.z);
+
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(6.2, 1.2, dist), trackMat);
+      deck.position.set(mid.x, mid.y - 0.6, mid.z);
+      deck.rotation.y = angle;
+      this.scene.add(deck);
+
+      [-1.2, 1.2].forEach(ox => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, dist), railMat);
+        rail.position.set(mid.x + Math.cos(angle) * ox, mid.y + 0.08, mid.z - Math.sin(angle) * ox);
+        rail.rotation.y = angle;
+        this.scene.add(rail);
+      });
+
+      const steps = Math.max(1, Math.floor(dist / 45));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const px = p1.x + (p2.x - p1.x) * t;
+        const pz = p1.z + (p2.z - p1.z) * t;
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(2.4, p1.y, 2.4), pierMat);
+        pier.position.set(px, p1.y / 2, pz);
+        this.scene.add(pier);
+      }
+    }
+  }
+
+  initTrains() {
+    const emu900 = this.buildEMU900Train();
+    this.scene.add(emu900);
+    this.trains.push({
+      mesh: emu900,
+      path: this.traPath,
+      progress: 0.25,
+      speed: 0.022,
+      name: '臺鐵 EMU900 最美微笑號'
+    });
+
+    const mrt = this.buildMRTTrain();
+    this.scene.add(mrt);
+    this.trains.push({
+      mesh: mrt,
+      path: this.mrtPath,
+      progress: 0.6,
+      speed: 0.028,
+      name: '臺中捷運綠線 100 型電聯車'
+    });
+  }
+
+  buildEMU900Train() {
+    const trainGroup = new THREE.Group();
+    const carLen = 14.0;
+    const carW = 3.1;
+    const carH = 3.4;
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xdde2e6, roughness: 0.25, metalness: 0.85 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x43a047, roughness: 0.4 });
+    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf57c00, roughness: 0.4 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a237e, roughness: 0.5 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+
+    [-1, 0, 1].forEach((carIdx) => {
+      const cz = carIdx * (carLen + 0.6);
+      const car = new THREE.Group();
+      car.position.set(0, 0, cz);
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(carW, carH, carLen), bodyMat);
+      body.position.set(0, carH / 2 + 0.4, 0);
+      car.add(body);
+
+      [-1, 1].forEach(s => {
+        const stripeG = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.24, carLen * 0.96), greenMat);
+        stripeG.position.set(s * (carW / 2 + 0.01), 1.2, 0);
+        car.add(stripeG);
+
+        const stripeO = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.16, carLen * 0.96), orangeMat);
+        stripeO.position.set(s * (carW / 2 + 0.012), 1.45, 0);
+        car.add(stripeO);
+
+        for (let w = -4; w <= 4; w++) {
+          if (Math.abs(w) === 2) continue;
+          const win = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.1, 1.0), glassMat);
+          win.position.set(s * (carW / 2 + 0.015), 2.2, w * 1.35);
+          car.add(win);
+        }
+      });
+
+      const acUnit = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.4, 3.8), darkMat);
+      acUnit.position.set(0, carH + 0.55, 0);
+      car.add(acUnit);
+
+      if (carIdx === 0) {
+        const panto = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.8, 1.8),
+          new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.4, metalness: 0.8 }));
+        panto.position.set(0, carH + 1.0, -2.5);
+        car.add(panto);
+      }
+
+      if (carIdx === 1) {
+        const nose = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.92, carH * 0.88, 1.8), bodyMat);
+        nose.position.set(0, carH / 2 + 0.35, carLen / 2 + 0.7);
+        nose.rotation.x = -0.15;
+        car.add(nose);
+
+        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.8, 1.3, 0.1), glassMat);
+        fGlass.position.set(0, 2.3, carLen / 2 + 1.25);
+        fGlass.rotation.x = -0.22;
+        car.add(fGlass);
+
+        [-0.85, 0.85].forEach(hx => {
+          const light = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.08),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff9c4, emissiveIntensity: 2.5 }));
+          light.position.set(hx, 1.1, carLen / 2 + 1.45);
+          car.add(light);
+        });
+
+        const spot = new THREE.SpotLight(0xfff9c4, 2.5, 60, Math.PI / 6, 0.4);
+        spot.position.set(0, 1.5, carLen / 2 + 1.5);
+        spot.target.position.set(0, 0, carLen / 2 + 40);
+        car.add(spot);
+        car.add(spot.target);
+      }
+
+      trainGroup.add(car);
+    });
+
+    return trainGroup;
+  }
+
+  buildMRTTrain() {
+    const mrtGroup = new THREE.Group();
+    const carLen = 12.0;
+    const carW = 2.95;
+    const carH = 3.2;
+
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.3 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x00897b, roughness: 0.35, metalness: 0.2 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b263b, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.85 });
+
+    [-1, 1].forEach((carIdx) => {
+      const cz = carIdx * (carLen / 2 + 0.3);
+      const car = new THREE.Group();
+      car.position.set(0, 0, cz);
+
+      const body = new THREE.Mesh(new THREE.BoxGeometry(carW, carH, carLen), whiteMat);
+      body.position.set(0, carH / 2 + 0.35, 0);
+      car.add(body);
+
+      [-1, 1].forEach(s => {
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, carLen), greenMat);
+        skirt.position.set(s * (carW / 2 + 0.01), 0.55, 0);
+        car.add(skirt);
+
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, carLen), greenMat);
+        stripe.position.set(s * (carW / 2 + 0.012), 1.4, 0);
+        car.add(stripe);
+
+        const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.95, carLen * 0.85), glassMat);
+        sideWin.position.set(s * (carW / 2 + 0.015), 2.1, 0);
+        car.add(sideWin);
+      });
+
+      if (carIdx === 1) {
+        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.85, 1.2, 0.1), glassMat);
+        fGlass.position.set(0, 2.1, carLen / 2 + 0.1);
+        fGlass.rotation.x = -0.15;
+        car.add(fGlass);
+
+        const led = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.22, 0.06),
+          new THREE.MeshStandardMaterial({ color: 0x00e676, emissive: 0x00e676, emissiveIntensity: 2.0 }));
+        led.position.set(0, 2.85, carLen / 2 + 0.12);
+        car.add(led);
+
+        [-0.7, 0.7].forEach(hx => {
+          const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.06),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.2 }));
+          l.position.set(hx, 0.95, carLen / 2 + 0.12);
+          car.add(l);
+        });
+      }
+
+      mrtGroup.add(car);
+    });
+
+    return mrtGroup;
+  }
+
+  update(dt, activePos) {
+    this.soundTimer += dt;
+    let shouldPlaySound = false;
+    if (this.soundTimer > 4.5) {
+      this.soundTimer = 0;
+      shouldPlaySound = true;
+    }
+
+    this.trains.forEach((t) => {
+      t.progress += t.speed * dt;
+      if (t.progress > 1) t.progress = 0;
+
+      const path = t.path;
+      const totalSegments = path.length - 1;
+      const exactIdx = t.progress * totalSegments;
+      const segIdx = Math.min(totalSegments - 1, Math.floor(exactIdx));
+      const segT = exactIdx - segIdx;
+
+      const p1 = path[segIdx];
+      const p2 = path[segIdx + 1];
+
+      const curX = p1.x + (p2.x - p1.x) * segT;
+      const curY = p1.y;
+      const curZ = p1.z + (p2.z - p1.z) * segT;
+
+      t.mesh.position.set(curX, curY, curZ);
+
+      const yaw = Math.atan2(p2.x - p1.x, p2.z - p1.z);
+      t.mesh.rotation.y = yaw;
+
+      if (activePos && shouldPlaySound) {
+        const dist = Math.hypot(curX - activePos.x, curZ - activePos.z);
+        if (dist < 220) {
+          soundManager.playTrainClack();
+          if (Math.random() < 0.35) {
+            soundManager.playTrainHorn();
+          }
+        }
+      }
+    });
+  }
+}
+
+// ============================================================================
 // 9. 核心遊戲應用程式 (TaichungRushApp)
 // ============================================================================
+
 export class TaichungRushApp {
   constructor() {
     this.container = document.getElementById('game-container');
@@ -3461,6 +4219,9 @@ export class TaichungRushApp {
     this.streetPropsSystem = null;
     this.trafficSystem = null;
     this.pedestrianSystem = null;
+    this.weatherSystem = null;
+    this.foodStallSystem = null;
+    this.railwaySystem = null;
 
     // 燈光與陰影
     this.dirLight = null;
@@ -3775,6 +4536,12 @@ export class TaichungRushApp {
     this.setTimeOfDay(next);
   }
 
+  toggleWeather() {
+    if (this.weatherSystem) {
+      this.weatherSystem.toggle();
+    }
+  }
+
   initControls() {
     const clockEl = document.getElementById('hud-clock');
     if (clockEl) {
@@ -3840,8 +4607,16 @@ export class TaichungRushApp {
         this.cycleTimeOfDay();
       }
 
+      if (state && (code === 'KeyK' || key === 'k' || key === 'K')) {
+        this.toggleWeather();
+      }
+
       if (state && code === 'KeyE') {
-        this.eatEgg();
+        if (this.foodStallSystem && this.foodStallSystem.currentNearStall) {
+          this.foodStallSystem.openModal();
+        } else {
+          this.eatEgg();
+        }
       }
 
       if (state && code === 'KeyR') {
@@ -3906,6 +4681,12 @@ export class TaichungRushApp {
       this.closeTeleportModal();
     });
     document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.togglePlayerMode());
+    document.getElementById('btn-weather')?.addEventListener('click', () => this.toggleWeather());
+    document.getElementById('btn-food')?.addEventListener('click', () => {
+      if (this.foodStallSystem) {
+        this.foodStallSystem.openModal();
+      }
+    });
     document.getElementById('btn-eat')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-eat-egg')?.addEventListener('click', () => this.eatEgg());
     document.getElementById('btn-shop')?.addEventListener('click', () => { document.getElementById('workshop-modal')?.classList.remove('hidden'); this.gtaManager?.updateWorkshopDisplay(); });
@@ -4092,6 +4873,12 @@ export class TaichungRushApp {
 
     // 快捷功能按鈕
     bindTouchBtn('btn-m-teleport', () => this.openTeleportModal());
+    bindTouchBtn('btn-m-weather', () => this.toggleWeather());
+    bindTouchBtn('btn-m-food', () => {
+      if (this.foodStallSystem) {
+        this.foodStallSystem.openModal();
+      }
+    });
     bindTouchBtn('btn-m-settings', () => this.toggleSettingsModal());
     bindTouchBtn('btn-m-fullscreen', () => this.toggleFullscreen());
     bindTouchBtn('btn-m-mission', () => this.gtaManager?.triggerMission());
@@ -5316,6 +6103,11 @@ export class TaichungRushApp {
       this.trafficSystem = new TrafficSystem(this.scene, this.roadSegments);
       this.pedestrianSystem = new PedestrianSystem(this.scene, this.roadSegments, this);
 
+      // 初始化天氣系統、夜市小吃攤與高架鐵路列車系統
+      this.weatherSystem = new WeatherSystem(this.scene, this.camera, this.dirLight, this.roadMeshes, this);
+      this.foodStallSystem = new NightMarketFoodSystem(this.scene, this);
+      this.railwaySystem = new RailwayTrainSystem(this.scene, this);
+
       // 載入完成
       this.updateProgress(100, '臺中市區街道鋪設完成！', 'Ready to Rush!');
       if (this.ldReadyBox) {
@@ -5495,6 +6287,21 @@ export class TaichungRushApp {
     // NPC 行人與巡邏員警步態動畫更新 (市民走動、手腳擺動、避讓)
     if (this.pedestrianSystem) {
       this.pedestrianSystem.update(dt, this.vehicle);
+    }
+
+    // 天氣系統更新 (雨水粒子與雷鳴閃電)
+    if (this.weatherSystem) {
+      this.weatherSystem.update(dt);
+    }
+
+    // 台中在地夜市小吃攤更新 (蒸氣動畫與距離提示)
+    if (this.foodStallSystem) {
+      this.foodStallSystem.update(dt, activePos);
+    }
+
+    // 台鐵 EMU900 與台中捷運綠線動態高架列車行駛
+    if (this.railwaySystem) {
+      this.railwaySystem.update(dt, activePos);
     }
 
     this.renderer.render(this.scene, this.camera);

@@ -1246,7 +1246,164 @@ export class SoundSystem {
     filter.connect(this.ambientGain);
     this.ambientSource.start();
   }
+
+  // ==========================================================================
+  // 11. 天氣環境音效 (Rain & Thunder)
+  // ==========================================================================
+  startRainSound() {
+    this.init();
+    if (this.rainSource || !this.ctx) return;
+    const bufSize = this.ctx.sampleRate * 2.0;
+    const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      d[i] = (Math.random() * 2 - 1) * 0.45;
+    }
+    this.rainSource = this.ctx.createBufferSource();
+    this.rainSource.buffer = buf;
+    this.rainSource.loop = true;
+
+    this.rainFilter = this.ctx.createBiquadFilter();
+    this.rainFilter.type = 'bandpass';
+    this.rainFilter.frequency.setValueAtTime(1400, this.ctx.currentTime);
+    this.rainFilter.Q.setValueAtTime(0.7, this.ctx.currentTime);
+
+    this.rainGain = this.ctx.createGain();
+    this.rainGain.gain.setValueAtTime(0.01, this.ctx.currentTime);
+    this.rainGain.gain.linearRampToValueAtTime(0.28, this.ctx.currentTime + 1.2);
+
+    this.rainSource.connect(this.rainFilter);
+    this.rainFilter.connect(this.rainGain);
+    this.rainGain.connect(this.ambientGain || this.masterGain);
+    this.rainSource.start();
+  }
+
+  stopRainSound() {
+    if (!this.rainSource || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    if (this.rainGain) {
+      this.rainGain.gain.linearRampToValueAtTime(0.001, now + 1.0);
+    }
+    setTimeout(() => {
+      try {
+        if (this.rainSource) {
+          this.rainSource.stop();
+          this.rainSource.disconnect();
+          this.rainSource = null;
+        }
+      } catch (e) {}
+    }, 1100);
+  }
+
+  playThunder() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // 遠處雷鳴與沉重低頻震盪
+    const bufSize = this.ctx.sampleRate * 2.8;
+    const buf = this.ctx.createBuffer(1, bufSize, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bufSize; i++) {
+      const white = (Math.random() * 2 - 1);
+      last = (last + (0.02 * white)) / 1.02;
+      d[i] = last * 3.5;
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buf;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(180, now);
+    filter.frequency.exponentialRampToValueAtTime(45, now + 2.5);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.75, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 2.7);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.sfxGain || this.masterGain);
+    noise.start(now);
+  }
+
+  // ==========================================================================
+  // 12. 鐵路列車音效 (Train Horn & Clack)
+  // ==========================================================================
+  playTrainClack() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    [0, 0.12].forEach(delay => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, now + delay);
+      osc.frequency.exponentialRampToValueAtTime(80, now + delay + 0.08);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.18, now + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + delay + 0.09);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain || this.masterGain);
+      osc.start(now + delay);
+      osc.stop(now + delay + 0.09);
+    });
+  }
+
+  playTrainHorn() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // 台鐵雙音空氣鳴笛 (311Hz & 370Hz)
+    [311.13, 369.99].forEach(freq => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(950, now);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.01, now);
+      gain.gain.linearRampToValueAtTime(0.24, now + 0.15);
+      gain.gain.setValueAtTime(0.22, now + 1.2);
+      gain.gain.linearRampToValueAtTime(0.001, now + 1.7);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.sfxGain || this.masterGain);
+      osc.start(now);
+      osc.stop(now + 1.75);
+    });
+  }
+
+  // ==========================================================================
+  // 13. 夜市小吃吃飽回血音效 (Eat Food & Drink)
+  // ==========================================================================
+  playEatFood() {
+    this.init();
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    // 大口享用美味小吃飽足感升階琶音 (C5 -> E5 -> G5 -> C6)
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.18, now + idx * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain || this.masterGain);
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.25);
+    });
+  }
 }
+
 
 // 建立全域單例模式，方便全專案各模組呼叫
 export const soundManager = new SoundSystem();
