@@ -3152,7 +3152,219 @@ class TrafficSystem {
 }
 
 // ============================================================================
-// 8. NPC 行人系統 (PedestrianSystem) - 市民行人與巡邏警察 (附肢體走動、物理被撞擊飛與警方通緝)
+// 8. 臺中高工專屬學生服裝材質輔助器 (TCIVS Uniform Texture Generator)
+// 依據真實學生制服/運動服實拍照 1:1 精準繪製：
+//  - Variant 0: 螢光綠運動服 (高一) + 黑色雙白線 TCIVS 運動短褲
+//  - Variant 1: 水藍色運動服 (高二) + 黑色雙白線 TCIVS 運動短褲
+//  - Variant 2: 鮮黃色運動服 (高三) + 黑色雙白線 TCIVS 運動短褲
+//  - Variant 3: 淺藍夏季短袖制服襯衫 (中工機三甲紅字刺繡) + 深藍制服長褲
+// ============================================================================
+class TCIVSUniformHelper {
+  static cached = null;
+
+  static getTextures() {
+    if (this.cached) return this.cached;
+
+    const finishTex = (cv) => {
+      const t = new THREE.CanvasTexture(cv);
+      t.colorSpace = THREE.SRGBColorSpace;
+      return t;
+    };
+
+    // (1) 運動服上衣產生器 (綠/藍/黃)
+    const makePEShirt = (bgHex, emblemHex, textDark = false) => {
+      const cv = document.createElement('canvas');
+      cv.width = 256; cv.height = 256;
+      const ctx = cv.getContext('2d');
+
+      // 主體布料底色
+      ctx.fillStyle = bgHex;
+      ctx.fillRect(0, 0, 256, 256);
+
+      // 細緻排汗布料雜訊紋理
+      for (let i = 0; i < 1800; i++) {
+        const v = Math.random() > 0.5 ? 255 : 0;
+        ctx.fillStyle = `rgba(${v},${v},${v},0.035)`;
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5);
+      }
+
+      // 白色圓領羅紋包邊 (Crew Neck)
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 16;
+      ctx.beginPath();
+      ctx.arc(128, 0, 48, 0, Math.PI);
+      ctx.stroke();
+
+      // 領口內側陰影
+      ctx.fillStyle = '#263238';
+      ctx.beginPath();
+      ctx.arc(128, 0, 40, 0, Math.PI);
+      ctx.fill();
+
+      // 落肩插肩袖 (Raglan Sleeves) 車縫線陰影
+      ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(82, 0); ctx.quadraticCurveTo(60, 40, 0, 75);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(174, 0); ctx.quadraticCurveTo(196, 40, 256, 75);
+      ctx.stroke();
+
+      // 左胸經典「台中高工」校徽與校名 (學生左胸，視角右側 x: 155~235)
+      // 12 齒綠/深色齒輪圖標
+      ctx.fillStyle = emblemHex;
+      ctx.beginPath();
+      ctx.arc(160, 72, 10, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 齒輪內白色襯底
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(160, 72, 7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 內嵌紅色「工」字
+      ctx.fillStyle = '#d32f2f';
+      ctx.fillRect(157, 69, 6, 6);
+
+      // 「台中高工」清晰正體印刷文字
+      ctx.fillStyle = textDark ? '#1a252f' : '#0d47a1';
+      ctx.font = 'bold 15px "Microsoft JhengHei", "PingFang TC", sans-serif';
+      ctx.fillText('台中高工', 176, 77);
+
+      // 下擺微陰影
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(0, 248, 256, 8);
+
+      return finishTex(cv);
+    };
+
+    // (2) 淺藍夏季短袖制服襯衫 (Photo 4)
+    const makeUniformShirt = () => {
+      const cv = document.createElement('canvas');
+      cv.width = 256; cv.height = 256;
+      const ctx = cv.getContext('2d');
+
+      // 淺藍色襯衫梭織棉布底色
+      ctx.fillStyle = '#cfe2f3';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // 梭織布料紋理
+      for (let i = 0; i < 2200; i++) {
+        const v = Math.random() > 0.5 ? 255 : 0;
+        ctx.fillStyle = `rgba(${v},${v},${v},0.03)`;
+        ctx.fillRect(Math.random() * 256, Math.random() * 256, 1.5, 1.5);
+      }
+
+      // 開襟 V 領襯衫領片 (Open Notched Collar)
+      ctx.fillStyle = '#263238';
+      ctx.beginPath();
+      ctx.moveTo(128, 0); ctx.lineTo(105, 0); ctx.lineTo(128, 55); ctx.lineTo(151, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#b3cbe3';
+      ctx.beginPath();
+      ctx.moveTo(105, 0); ctx.lineTo(65, 38); ctx.lineTo(122, 52);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(151, 0); ctx.lineTo(191, 38); ctx.lineTo(134, 52);
+      ctx.closePath();
+      ctx.fill();
+
+      // 前門襟排扣帶 (Button Placket)
+      ctx.fillStyle = '#bbd4ea';
+      ctx.fillRect(122, 52, 12, 204);
+
+      // 4 顆白色珍珠排扣
+      [82, 122, 162, 202].forEach(by => {
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(128, by, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#90a4ae';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // 左胸口袋 (Left Chest Pocket, x: 156~220, y: 72~135)
+      ctx.strokeStyle = '#99b8d4';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(156, 72, 62, 62);
+
+      // 照片 4 精準還原：經典紅色繡線學號與科別「中工 機三甲 610317」
+      ctx.fillStyle = '#d32f2f';
+      ctx.font = 'bold 12px "Microsoft JhengHei", sans-serif';
+      ctx.fillText('中工  製圖科', 160, 93);
+      ctx.font = 'bold 13px monospace';
+      ctx.fillText('6 1 0 3 1 7', 160, 114);
+
+      return finishTex(cv);
+    };
+
+    // (3) 黑色雙白線 TCIVS 運動短褲 (Photos 1, 2, 3)
+    const makeShorts = () => {
+      const cv = document.createElement('canvas');
+      cv.width = 128; cv.height = 128;
+      const ctx = cv.getContext('2d');
+
+      ctx.fillStyle = '#141414';
+      ctx.fillRect(0, 0, 128, 128);
+
+      // 左腿外側雙條白色運動滾邊 (Double White Stripes)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(10, 0, 3.5, 128);
+      ctx.fillRect(18, 0, 3.5, 128);
+
+      // 沿白線垂直印製的白色「TCIVS」標誌字樣
+      ctx.font = 'bold 12px Arial, sans-serif';
+      const letters = ['T', 'C', 'I', 'V', 'S'];
+      letters.forEach((ch, idx) => {
+        ctx.fillText(ch, 26, 26 + idx * 16);
+      });
+
+      // 照片中清晰的小白標籤 (White Tag)
+      ctx.fillRect(26, 108, 9, 6);
+
+      return finishTex(cv);
+    };
+
+    // (4) 運動慢跑鞋貼圖
+    const makeShoe = () => {
+      const cv = document.createElement('canvas');
+      cv.width = 64; cv.height = 64;
+      const ctx = cv.getContext('2d');
+      ctx.fillStyle = '#ffffff'; // 白色外底
+      ctx.fillRect(0, 48, 64, 16);
+      ctx.fillStyle = '#111111'; // 黑色鞋面
+      ctx.fillRect(0, 0, 64, 48);
+      ctx.fillStyle = '#ffffff'; // 白色運動側邊飾條
+      ctx.beginPath();
+      ctx.arc(32, 28, 14, 0.2, Math.PI * 0.9);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+      return finishTex(cv);
+    };
+
+    this.cached = {
+      peshirtGreen: makePEShirt('#8bc34a', '#1b5e20', true),   // 螢光綠 (Photo 1)
+      peshirtBlue: makePEShirt('#81d4fa', '#0277bd', false),   // 水藍色 (Photo 2)
+      peshirtYellow: makePEShirt('#fdd835', '#212121', true),  // 鮮黃色 (Photo 3)
+      uniformShirt: makeUniformShirt(),                        // 淺藍制服 (Photo 4)
+      tcivsShorts: makeShorts(),
+      shoeTex: makeShoe()
+    };
+
+    return this.cached;
+  }
+}
+
+// ============================================================================
+// 8. NPC 行人與臺中高工學生 AI 系統 (PedestrianSystem)
 // ============================================================================
 class PedestrianSystem {
   constructor(scene, roadSegments, app = null) {
@@ -3160,43 +3372,306 @@ class PedestrianSystem {
     this.roadSegments = roadSegments;
     this.app = app;
     this.pedestrians = [];
+
+    // 定義臺中高工校內外 7 條專屬學生漫步巡邏巡迴路線 (World Coordinates)
+    this.tcivsCampusPaths = [
+      // 0. 高工路南校門前人行道、公車候車亭與斑馬線 (東走向)
+      [
+        new THREE.Vector3(-2480, 0.25, 2743),
+        new THREE.Vector3(-2399, 0.25, 2743), // 正門前
+        new THREE.Vector3(-2371, 0.25, 2743), // 公車候車亭
+        new THREE.Vector3(-2200, 0.25, 2743)
+      ],
+      // 1. 校內迎賓林蔭大道 (自高工路正門貫穿水池至中工大樓)
+      [
+        new THREE.Vector3(-2399, 0.25, 2730),
+        new THREE.Vector3(-2372, 0.25, 2678), // 噴泉水池旁
+        new THREE.Vector3(-2372, 0.25, 2625), // 中工大樓前羅馬柱門廊
+        new THREE.Vector3(-2372, 0.25, 2550)  // 實習大樓中庭
+      ],
+      // 2. 西南側網球場與籃球場通道
+      [
+        new THREE.Vector3(-2372, 0.25, 2678),
+        new THREE.Vector3(-2442, 0.25, 2698),
+        new THREE.Vector3(-2442, 0.25, 2660),
+        new THREE.Vector3(-2410, 0.25, 2660)
+      ],
+      // 3. 400m 田徑場外圍跑道與看台
+      [
+        new THREE.Vector3(-2245, 0.25, 2573),
+        new THREE.Vector3(-2245, 0.25, 2470),
+        new THREE.Vector3(-2200, 0.25, 2500),
+        new THREE.Vector3(-2200, 0.25, 2560)
+      ],
+      // 4. 工學路後門人行道 (北校門)
+      [
+        new THREE.Vector3(-2450, 0.25, 2358),
+        new THREE.Vector3(-2332, 0.25, 2358), // 北校門
+        new THREE.Vector3(-2200, 0.25, 2358)
+      ],
+      // 5. 工學六街西側人行道
+      [
+        new THREE.Vector3(-2485, 0.25, 2740),
+        new THREE.Vector3(-2485, 0.25, 2550),
+        new THREE.Vector3(-2485, 0.25, 2360)
+      ],
+      // 6. 工學二街東側人行道
+      [
+        new THREE.Vector3(-2150, 0.25, 2740),
+        new THREE.Vector3(-2150, 0.25, 2550),
+        new THREE.Vector3(-2150, 0.25, 2360)
+      ]
+    ];
+
     this.initPool();
   }
 
   initPool() {
-    if (!this.roadSegments || this.roadSegments.length === 0) return;
+    // 1. 一般台中市民與巡邏警察 (全市道路分派 35 位)
+    if (this.roadSegments && this.roadSegments.length > 0) {
+      const cityPeds = 35;
+      for (let i = 0; i < cityPeds; i++) {
+        const isPolice = i % 8 === 0;
+        const roadIdx = (i * 3) % this.roadSegments.length;
+        const road = this.roadSegments[roadIdx];
+        if (!road || road.points.length < 2) continue;
 
-    // 建立 45 位真實活生生台中市民與警察 (支援走動、轉向與被車輛撞飛物理)
-    const totalPeds = 45;
-    for (let i = 0; i < totalPeds; i++) {
-      const isPolice = i % 8 === 0;
-      const roadIdx = (i * 3) % this.roadSegments.length;
-      const road = this.roadSegments[roadIdx];
-      if (!road || road.points.length < 2) continue;
+        const group = new THREE.Group();
+        const parts = this.buildCitizenHumanoid(group, isPolice, i);
+        this.scene.add(group);
+
+        this.pedestrians.push({
+          group,
+          isPolice,
+          isStudent: false,
+          parts,
+          roadIdx,
+          pointIdx: 0,
+          t: Math.random(),
+          walkPhase: Math.random() * Math.PI * 2,
+          speed: 1.25 + Math.random() * 0.45,
+          side: i % 2 === 0 ? 1 : -1,
+          state: "walking",
+          vx: 0, vy: 0, vz: 0,
+          spinSpeed: 0,
+          downTimer: 0
+        });
+      }
+    }
+
+    // 2. 【核心功能】：臺中高工專屬學生 NPC AI 陣容 (20 位身著 4 種實拍服飾的學生)
+    const studentCount = 20;
+    for (let i = 0; i < studentCount; i++) {
+      const variant = i % 4; // 0: 綠色運動服, 1: 藍色運動服, 2: 黃色運動服, 3: 淺藍制服
+      const pathIdx = i % this.tcivsCampusPaths.length;
+      const path = this.tcivsCampusPaths[pathIdx];
 
       const group = new THREE.Group();
-      const parts = this.buildHumanoid(group, isPolice, i);
+      const parts = this.buildStudentHumanoid(group, variant, i);
       this.scene.add(group);
+
+      // 初次放置於該路徑起點或沿線
+      const initPt = path[Math.floor(Math.random() * (path.length - 1))];
+      group.position.copy(initPt);
 
       this.pedestrians.push({
         group,
-        isPolice,
+        isPolice: false,
+        isStudent: true,
+        studentVariant: variant,
         parts,
-        roadIdx,
+        customPath: path,
+        pathIdx,
         pointIdx: 0,
-        t: Math.random(),
+        pathDir: i % 2 === 0 ? 1 : -1,
+        t: Math.random() * 0.8,
         walkPhase: Math.random() * Math.PI * 2,
-        speed: 1.25 + Math.random() * 0.45,
-        side: i % 2 === 0 ? 1 : -1,
-        state: "walking", // "walking" | "hit" | "down"
+        speed: 1.15 + Math.random() * 0.4,
+        side: 0,
+        state: "walking",
         vx: 0, vy: 0, vz: 0,
         spinSpeed: 0,
-        downTimer: 0
+        downTimer: 0,
+        interactCooldown: 0,
+        isInteracting: false,
+        interactTimer: 0
       });
     }
   }
 
-  buildHumanoid(group, isPolice, seed = 0) {
+  // 建立身著照片 1:1 實拍服裝的臺中高工學生 3D 角色
+  buildStudentHumanoid(group, variant = 0, seed = 0) {
+    const texs = TCIVSUniformHelper.getTextures();
+    const skinTones = [0xffdbac, 0xf1c27d, 0xe0ac69];
+    const skinMat = new THREE.MeshStandardMaterial({
+      color: skinTones[seed % skinTones.length],
+      roughness: 0.6
+    });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.85 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const darkPantsMat = new THREE.MeshStandardMaterial({ color: 0x1a252f, roughness: 0.8 }); // 制服深藍長褲
+
+    // (1) 頭部與台灣高中生經典層次瀏海髮型
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.25, 0.24), skinMat);
+    head.position.y = 1.62;
+    group.add(head);
+
+    // 濃密黑髮與前額瀏海 (Bangs)
+    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.12, 0.27), hairMat);
+    hair.position.set(0, 1.76, 0.01);
+    group.add(hair);
+
+    const fringe = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.08, 0.06), hairMat);
+    fringe.position.set(0, 1.71, 0.14);
+    group.add(fringe);
+
+    // (2) 軀幹衣服 (依照片精選貼圖覆蓋正面)
+    let frontTex, bgHex, isUniform = (variant === 3);
+    if (variant === 0) {
+      frontTex = texs.peshirtGreen;
+      bgHex = 0x8bc34a; // 螢光綠
+    } else if (variant === 1) {
+      frontTex = texs.peshirtBlue;
+      bgHex = 0x81d4fa;  // 水藍色
+    } else if (variant === 2) {
+      frontTex = texs.peshirtYellow;
+      bgHex = 0xfdd835; // 鮮黃色
+    } else {
+      frontTex = texs.uniformShirt;
+      bgHex = 0xcfe2f3; // 淺藍制服
+    }
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: bgHex, roughness: 0.6 });
+    const frontMat = new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.6 });
+
+    // Box 面順序: +x, -x, +y, -y, +z(正面), -z(背面)
+    const torsoMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.38, 0.58, 0.22),
+      [bodyMat, bodyMat, whiteMat, bodyMat, frontMat, bodyMat]
+    );
+    torsoMesh.position.y = 1.18;
+    group.add(torsoMesh);
+
+    // (3) 經典中工書包 / 後背包 (學生背後 Z = -0.16)
+    const backpackMat = new THREE.MeshStandardMaterial({
+      color: (variant === 0 || variant === 3) ? 0x1b5e20 : 0x1a252f, // 經典墨綠帆布書包 or 深藍雙肩包
+      roughness: 0.8
+    });
+    const backpack = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.12), backpackMat);
+    backpack.position.set(0, 1.20, -0.16);
+    group.add(backpack);
+
+    // 書包雙肩背帶
+    [-0.1, 0.1].forEach(bx => {
+      const strap = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.38, 0.26), whiteMat);
+      strap.position.set(bx, 1.28, 0);
+      group.add(strap);
+    });
+
+    // (4) 手臂：運動服為白色插肩短袖(外側帶年級色條紋)，制服為淺藍短袖
+    const createArm = (isLeft) => {
+      const armGroup = new THREE.Group();
+      armGroup.position.set(isLeft ? 0.26 : -0.26, 1.42, 0);
+
+      // 短袖袖子 (長 0.22m)
+      const sleeveColor = isUniform ? 0xcfe2f3 : 0xffffff;
+      const sleeve = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.22, 0.12),
+        new THREE.MeshStandardMaterial({ color: sleeveColor, roughness: 0.6 })
+      );
+      sleeve.position.y = -0.11;
+      armGroup.add(sleeve);
+
+      // 運動服肩袖年級色滾邊飾條
+      if (!isUniform) {
+        const stripe = new THREE.Mesh(
+          new THREE.BoxGeometry(0.02, 0.20, 0.04),
+          new THREE.MeshBasicMaterial({ color: bgHex })
+        );
+        stripe.position.set(isLeft ? 0.06 : -0.06, -0.11, 0);
+        armGroup.add(stripe);
+      }
+
+      // 手臂與手掌 (膚色)
+      const forearm = new THREE.Mesh(
+        new THREE.BoxGeometry(0.09, 0.30, 0.09),
+        skinMat
+      );
+      forearm.position.y = -0.36;
+      armGroup.add(forearm);
+
+      group.add(armGroup);
+      return armGroup;
+    };
+
+    const leftArm = createArm(true);
+    const rightArm = createArm(false);
+
+    // (5) 腿部與褲子：
+    //  - 運動服：黑色短褲(左腿帶雙白線與垂直 TCIVS 字樣) + 白襪 + 運動球鞋
+    //  - 制服：深藍色長褲 + 學生皮鞋
+    const createLeg = (isLeft) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(isLeft ? 0.11 : -0.11, 0.72, 0);
+
+      if (!isUniform) {
+        // A. 運動短褲 (長 0.34m)
+        let shortsSideMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.8 });
+        let shortsMatArr = [shortsSideMat, shortsSideMat, shortsSideMat, shortsSideMat, shortsSideMat, shortsSideMat];
+        // 左腿外側覆蓋「TCIVS + 雙白線」貼圖
+        if (isLeft) {
+          const leftStripeMat = new THREE.MeshStandardMaterial({ map: texs.tcivsShorts, roughness: 0.8 });
+          shortsMatArr[0] = leftStripeMat; // +X 外側面
+        }
+
+        const shortsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.34, 0.15), shortsMatArr);
+        shortsMesh.position.y = -0.17;
+        legGroup.add(shortsMesh);
+
+        // 膝蓋與小腿 (膚色，長 0.16m)
+        const calf = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.16, 0.11), skinMat);
+        calf.position.y = -0.42;
+        legGroup.add(calf);
+
+        // 白色運動中筒襪 (White Crew Socks, 長 0.12m)
+        const socks = new THREE.Mesh(new THREE.BoxGeometry(0.115, 0.12, 0.115), whiteMat);
+        socks.position.y = -0.56;
+        legGroup.add(socks);
+
+        // 黑色 Nike 款運動慢跑鞋
+        const shoe = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.08, 0.20),
+          new THREE.MeshStandardMaterial({ map: texs.shoeTex, roughness: 0.5 })
+        );
+        shoe.position.set(0, -0.66, 0.04);
+        legGroup.add(shoe);
+      } else {
+        // B. 制服深藍長褲 (長 0.64m)
+        const pants = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.64, 0.14), darkPantsMat);
+        pants.position.y = -0.32;
+        legGroup.add(pants);
+
+        // 黑色學生皮鞋
+        const leatherShoe = new THREE.Mesh(
+          new THREE.BoxGeometry(0.13, 0.08, 0.20),
+          new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3 })
+        );
+        leatherShoe.position.set(0, -0.66, 0.04);
+        legGroup.add(leatherShoe);
+      }
+
+      group.add(legGroup);
+      return legGroup;
+    };
+
+    const leftLeg = createLeg(true);
+    const rightLeg = createLeg(false);
+
+    return { torso: torsoMesh, leftArm, rightArm, leftLeg, rightLeg, head };
+  }
+
+  // 一般市民與巡邏警察造型
+  buildCitizenHumanoid(group, isPolice, seed = 0) {
     const skinTones = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642];
     const skinMat = new THREE.MeshStandardMaterial({
       color: skinTones[seed % skinTones.length],
@@ -3204,12 +3679,10 @@ class PedestrianSystem {
     });
     const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9 });
 
-    // 頭部
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24), skinMat);
     head.position.y = 1.62;
     group.add(head);
 
-    // 頭髮 / 警帽 / 安全帽
     if (isPolice) {
       const policeCap = new THREE.Mesh(
         new THREE.CylinderGeometry(0.19, 0.16, 0.1, 10),
@@ -3223,33 +3696,21 @@ class PedestrianSystem {
       group.add(hair);
     }
 
-    // 軀幹衣服 (台灣經典多元服裝風格)
     let shirtMat, pantsMat;
     if (isPolice) {
-      shirtMat = new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.5 }); // 螢光反光背心
+      shirtMat = new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.5 });
       pantsMat = new THREE.MeshStandardMaterial({ color: 0x1a252f, roughness: 0.8 });
     } else {
-      // 學生制服、上班族襯衫、休閒黃T恤、排汗衫
-      const shirtColors = [
-        0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22,
-        0xecf0f1, 0x34495e, 0x9b59b6, 0x16a085, 0xff7675
-      ];
-      shirtMat = new THREE.MeshStandardMaterial({
-        color: shirtColors[seed % shirtColors.length],
-        roughness: 0.6
-      });
-      const pantsColors = [0x2c3e50, 0x34495e, 0x1e272e, 0x7f8c8d, 0x2d3436];
-      pantsMat = new THREE.MeshStandardMaterial({
-        color: pantsColors[(seed * 2) % pantsColors.length],
-        roughness: 0.8
-      });
+      const shirtColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0xecf0f1, 0x34495e, 0x9b59b6];
+      shirtMat = new THREE.MeshStandardMaterial({ color: shirtColors[seed % shirtColors.length], roughness: 0.6 });
+      const pantsColors = [0x2c3e50, 0x34495e, 0x1e272e, 0x7f8c8d];
+      pantsMat = new THREE.MeshStandardMaterial({ color: pantsColors[(seed * 2) % pantsColors.length], roughness: 0.8 });
     }
 
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.6, 0.22), shirtMat);
     torso.position.y = 1.18;
     group.add(torso);
 
-    // 手臂與腿關節樞紐
     const armGeom = new THREE.BoxGeometry(0.1, 0.52, 0.1);
     armGeom.translate(0, -0.24, 0);
 
@@ -3286,7 +3747,7 @@ class PedestrianSystem {
       // A. 被撞擊飛空中的物理運動 (Ragdoll Knockback)
       // --------------------------------------------------
       if (p.state === "hit") {
-        p.vy -= 18.0 * dt; // 重力加速度
+        p.vy -= 18.0 * dt;
         p.group.position.x += p.vx * dt;
         p.group.position.y += p.vy * dt;
         p.group.position.z += p.vz * dt;
@@ -3294,13 +3755,12 @@ class PedestrianSystem {
         p.group.rotation.x += p.spinSpeed * dt;
         p.group.rotation.z += p.spinSpeed * 0.6 * dt;
 
-        // 落地判定 (摔在地面 Y=0.22)
         if (p.group.position.y <= 0.22) {
           p.group.position.y = 0.22;
           p.vy = 0;
           p.vx *= 0.3;
           p.vz *= 0.3;
-          p.group.rotation.x = Math.PI * 0.5; // 躺平倒地
+          p.group.rotation.x = Math.PI * 0.5;
           p.group.rotation.z = 0;
           p.state = "down";
           p.downTimer = 0;
@@ -3314,128 +3774,203 @@ class PedestrianSystem {
       if (p.state === "down") {
         p.downTimer += dt;
         if (p.downTimer > 7.0 && playerPos) {
-          // 重新復活分派至玩家前方人行道
           this.respawnNearPlayer(p, playerPos);
         }
         continue;
       }
 
       // --------------------------------------------------
-      // C. 正常沿著人行道漫步
+      // C. 沿著路徑漫步 (台中高工學生專屬校園巡迴路線 OR 市區一般道路)
       // --------------------------------------------------
-      const road = this.roadSegments[p.roadIdx];
-      if (!road || road.points.length < 2) {
-        if (playerPos) this.respawnNearPlayer(p, playerPos);
-        continue;
+      let curX, curZ, fwdDx, fwdDz;
+
+      if (p.customPath && p.customPath.length >= 2) {
+        // 臺中高工學生自主巡迴路徑
+        const path = p.customPath;
+        if (p.pointIdx >= path.length - 1) {
+          p.pointIdx = path.length - 1;
+          p.pathDir = -1;
+        } else if (p.pointIdx <= 0) {
+          p.pointIdx = 0;
+          p.pathDir = 1;
+        }
+        const p1 = path[p.pointIdx];
+        const nextIdx = Math.max(0, Math.min(path.length - 1, p.pointIdx + p.pathDir));
+        const p2 = path[nextIdx];
+
+        if (p1 && p2) {
+          const dx = p2.x - p1.x;
+          const dz = p2.z - p1.z;
+          const segLen = Math.hypot(dx, dz);
+
+          if (segLen > 0.05) {
+            p.t += (p.speed * dt) / segLen;
+            if (p.t >= 1.0) {
+              p.t = 0;
+              p.pointIdx += p.pathDir;
+              // 走到路徑折返端點時優雅轉向折返
+              if (p.pointIdx >= path.length - 1) {
+                p.pointIdx = path.length - 1;
+                p.pathDir = -1;
+              } else if (p.pointIdx <= 0) {
+                p.pointIdx = 0;
+                p.pathDir = 1;
+              }
+            }
+
+            curX = p1.x + dx * p.t;
+            curZ = p1.z + dz * p.t;
+            fwdDx = dx * p.pathDir;
+            fwdDz = dz * p.pathDir;
+          } else {
+            curX = p1.x;
+            curZ = p1.z;
+            fwdDx = 1;
+            fwdDz = 0;
+          }
+        }
+      } else {
+        // 一般市區道路行走
+        const road = this.roadSegments[p.roadIdx];
+        if (!road || road.points.length < 2) {
+          if (playerPos) this.respawnNearPlayer(p, playerPos);
+          continue;
+        }
+
+        const pts = road.points;
+        const p1 = pts[p.pointIdx];
+        const p2 = pts[Math.min(p.pointIdx + 1, pts.length - 1)];
+
+        const dx = p2.x - p1.x;
+        const dz = p2.z - p1.z;
+        const segLen = Math.hypot(dx, dz);
+
+        if (segLen > 0.1) {
+          p.t += (p.speed * dt) / segLen;
+          if (p.t >= 1.0) {
+            p.t = 0;
+            p.pointIdx++;
+            if (p.pointIdx >= pts.length - 1) {
+              p.pointIdx = 0;
+              p.roadIdx = (p.roadIdx + 1) % this.roadSegments.length;
+            }
+          }
+
+          const nx = -dz / segLen;
+          const nz = dx / segLen;
+          const swOffset = (road.width / 2 + 1.2) * p.side;
+
+          curX = p1.x + dx * p.t + nx * swOffset;
+          curZ = p1.z + dz * p.t + nz * swOffset;
+          fwdDx = dx;
+          fwdDz = dz;
+        }
       }
 
-      const pts = road.points;
-      const p1 = pts[p.pointIdx];
-      const p2 = pts[Math.min(p.pointIdx + 1, pts.length - 1)];
+      if (curX == null) continue;
 
-      const dx = p2.x - p1.x;
-      const dz = p2.z - p1.z;
-      const segLen = Math.hypot(dx, dz);
+      // 肢體擺動走動動畫
+      p.walkPhase += dt * p.speed * 4.8;
+      const swing = Math.sin(p.walkPhase) * 0.45;
 
-      if (segLen > 0.1) {
-        p.t += (p.speed * dt) / segLen;
-        if (p.t >= 1.0) {
-          p.t = 0;
-          p.pointIdx++;
-          if (p.pointIdx >= pts.length - 1) {
-            p.pointIdx = 0;
-            p.roadIdx = (p.roadIdx + 1) % this.roadSegments.length;
+      p.parts.leftLeg.rotation.x = swing;
+      p.parts.rightLeg.rotation.x = -swing;
+      p.parts.leftArm.rotation.x = -swing * 0.8;
+      p.parts.rightArm.rotation.x = swing * 0.8;
+      p.parts.torso.position.y = 1.18 + Math.abs(Math.sin(p.walkPhase)) * 0.03;
+
+      p.group.position.set(curX, 0.22, curZ);
+      if (fwdDx != null) {
+        p.group.rotation.set(0, Math.atan2(fwdDx, fwdDz), 0);
+      }
+
+      // --------------------------------------------------
+      // D. 學生互動 AI 與玩家靠近對話、閃避機制
+      // --------------------------------------------------
+      if (playerPos) {
+        const distToCar = Math.hypot(curX - playerPos.x, curZ - playerPos.z);
+        const hitRadius = (playerVehicle.type === "scooter" ? 1.4 : 2.1);
+
+        // 1. 車輛撞擊檢測
+        if (distToCar < hitRadius && carSpeedKmh > 7.0) {
+          p.state = "hit";
+          const carRotY = playerVehicle.meshGroup.rotation.y;
+          const impactForce = Math.min(26, carSpeedKmh * 0.45 + 5.0);
+
+          p.vx = Math.sin(carRotY) * impactForce + (Math.random() - 0.5) * 4.0;
+          p.vy = 5.2 + Math.random() * 2.5;
+          p.vz = Math.cos(carRotY) * impactForce + (Math.random() - 0.5) * 4.0;
+          p.spinSpeed = (Math.random() - 0.5) * 16.0;
+
+          if (window.soundManager) window.soundManager.playCrash(0.8);
+
+          if (this.app?.gtaManager) {
+            const starsToAdd = p.isPolice ? 3 : (p.isStudent ? 2 : 1);
+            this.app.gtaManager.addWanted(starsToAdd);
+            this.app.gtaManager.addCash(-500);
+          }
+          if (this.app) {
+            if (p.isStudent) {
+              this.app.showToast("🚨 肇事衝撞臺中高工在校學生！臺中市警察局全面發布 2 星圍捕！");
+            } else {
+              this.app.showToast(p.isPolice ? "🚨 衝撞執勤員警！全面發布 3 星圍捕！" : "💥 肇事撞擊行人！警方發布通緝！");
+            }
+          }
+          continue;
+        }
+
+        // 2. 學生高智慧主動避車 (Car Evasion AI)
+        if (p.isStudent && distToCar < 6.5 && carSpeedKmh > 20.0) {
+          // 迅速往路緣側躍閃避
+          p.group.position.x += (Math.random() - 0.5) * 0.8;
+          p.parts.rightArm.rotation.x = -Math.PI * 0.6; // 驚嚇舉手
+        }
+
+        // 3. 學生親切互動對話 (當玩家徒步或慢速靠近時觸發)
+        if (p.isStudent && distToCar < 3.8 && carSpeedKmh < 10.0) {
+          p.interactCooldown = (p.interactCooldown || 0) - dt;
+          if (p.interactCooldown <= 0) {
+            p.interactCooldown = 12.0; // 12秒冷卻
+
+            // 面向玩家並熱情招手
+            p.parts.rightArm.rotation.x = -Math.PI * 0.75;
+            p.parts.rightArm.rotation.z = 0.25;
+
+            const quotes = [
+              "🎒 台中高工學生(高一綠): 「學長好！綠色是高一運動服，今天實習工廠好多銼刀作業要交...」",
+              "🎒 台中高工學生(高二藍): 「學長好！水藍色是高二，放學等一下要去高工路買手搖飲～」",
+              "🎒 台中高工學生(高三黃): 「鮮黃色是高三！正在準備統測跟乙級技術士檢定，中工加油！」",
+              "🎒 台中高工學生(制服): 「教官在校門口抓沒紮衣服，快把制服襯衫拉好！我是機三甲的！」",
+              "🎒 台中高工學生: 「台中高工讚啦！放學要去西南球場打網球，要一起來PK嗎？」",
+              "🎒 台中高工學生: 「你看校門口林蔭大道兩旁的樟樹長得好茂盛漂亮喔！」"
+            ];
+            const msg = quotes[p.studentVariant % quotes.length];
+            if (this.app?.showToast) this.app.showToast(msg);
           }
         }
 
-        const nx = -dz / segLen;
-        const nz = dx / segLen;
-
-        // 走在人行道上 (高程 Y = 0.22，偏移 halfRoadWidth + 1.2m)
-        const swOffset = (road.width / 2 + 1.2) * p.side;
-        const curX = p1.x + dx * p.t + nx * swOffset;
-        const curZ = p1.z + dz * p.t + nz * swOffset;
-
-        p.walkPhase += dt * p.speed * 4.8;
-        const swing = Math.sin(p.walkPhase) * 0.45;
-
-        // 自然走動擺動肢體
-        p.parts.leftLeg.rotation.x = swing;
-        p.parts.rightLeg.rotation.x = -swing;
-        p.parts.leftArm.rotation.x = -swing * 0.8;
-        p.parts.rightArm.rotation.x = swing * 0.8;
-        p.parts.torso.position.y = 1.18 + Math.abs(Math.sin(p.walkPhase)) * 0.03;
-
-        p.group.position.set(curX, 0.22, curZ);
-        p.group.rotation.set(0, Math.atan2(dx, dz), 0);
-
-        // --------------------------------------------------
-        // D. 車輛撞擊檢測 (車速 > 6 km/h 撞擊飛人 + 通緝警方抓捕)
-        // --------------------------------------------------
-        if (playerPos) {
-          const distToCar = Math.hypot(curX - playerPos.x, curZ - playerPos.z);
-          const hitRadius = (playerVehicle.type === "scooter" ? 1.4 : 2.1);
-
-          if (distToCar < hitRadius && carSpeedKmh > 7.0) {
-            // ★ 撞擊行人！觸發物理擊飛與 GTA 通緝
-            p.state = "hit";
-
-            const carRotY = playerVehicle.meshGroup.rotation.y;
-            const carFwdX = Math.sin(carRotY);
-            const carFwdZ = Math.cos(carRotY);
-            const impactForce = Math.min(26, carSpeedKmh * 0.45 + 5.0);
-
-            p.vx = carFwdX * impactForce + (Math.random() - 0.5) * 4.0;
-            p.vy = 5.2 + Math.random() * 2.5; // 挑飛至空中
-            p.vz = carFwdZ * impactForce + (Math.random() - 0.5) * 4.0;
-            p.spinSpeed = (Math.random() - 0.5) * 16.0;
-
-            // 肢體被撞擊變形
-            p.parts.leftLeg.rotation.x = Math.PI * 0.4;
-            p.parts.rightLeg.rotation.x = -Math.PI * 0.3;
-            p.parts.leftArm.rotation.z = Math.PI * 0.6;
-            p.parts.rightArm.rotation.z = -Math.PI * 0.6;
-
-            // 撞擊音效回饋
-            if (window.soundManager) {
-              window.soundManager.playCrash(0.8);
-            }
-
-            // GTA 通緝系統：通緝星級提升！警方全面圍捕！
-            if (this.app?.gtaManager) {
-              const starsToAdd = p.isPolice ? 3 : (carSpeedKmh > 55 ? 2 : 1);
-              this.app.gtaManager.addWanted(starsToAdd);
-              this.app.gtaManager.addCash(-500); // 扣除肇事賠償金
-            }
-            if (this.app) {
-              this.app.showToast(p.isPolice ? "🚨 衝撞襲擊執勤員警！臺中市警察局全面發布 3 星圍捕！" : "💥 肇事撞擊行人！臺中市警察局全面發布通緝！");
-            }
-            continue;
-          }
-
-          // 執勤警察徒步逮捕機制：通緝中且玩家停在員警身旁時實施逮捕
-          if (p.isPolice && this.app?.gtaManager?.wantedStars > 0) {
-            if (distToCar < 3.2 && carSpeedKmh < 12) {
-              p.arrestTimer = (p.arrestTimer || 0) + dt;
-              if (p.arrestTimer > 1.6) {
-                p.arrestTimer = 0;
-                this.app.gtaManager.triggerBusted();
-              }
-            } else {
+        // 4. 執勤警察徒步逮捕機制
+        if (p.isPolice && this.app?.gtaManager?.wantedStars > 0) {
+          if (distToCar < 3.2 && carSpeedKmh < 12) {
+            p.arrestTimer = (p.arrestTimer || 0) + dt;
+            if (p.arrestTimer > 1.6) {
               p.arrestTimer = 0;
+              this.app.gtaManager.triggerBusted();
             }
+          } else {
+            p.arrestTimer = 0;
           }
+        }
 
-          // 太遠時 (超過 150m) 重新分派到玩家身旁人行道，確保身邊總是充滿行人
-          if (distToCar > 150) {
-            this.respawnNearPlayer(p, playerPos);
-          }
+        // 5. 市區行人太遠時動態重新分派 (若在台中高工周邊則有極高機率刷新為學生)
+        if (distToCar > 160 && !p.customPath) {
+          this.respawnNearPlayer(p, playerPos);
         }
       }
     }
   }
 
-  // 將行人平滑重新分派至玩家身旁半徑 30m~85m 的街道人行道上
+  // 將行人平滑重新分派至玩家身旁人行道
   respawnNearPlayer(p, playerPos) {
     if (!this.roadSegments || this.roadSegments.length === 0) return;
     const len = this.roadSegments.length;
@@ -3457,7 +3992,7 @@ class PedestrianSystem {
         }
       }
     }
-    // 找不到就隨機取一段
+
     p.roadIdx = (p.roadIdx + 3) % len;
     p.pointIdx = 0;
     p.t = 0;
