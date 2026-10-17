@@ -116,7 +116,7 @@
       </button>
       <div class="ld-key-hints ld-key-hints-chinese">
         <span>🎮 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 駕駛</span>
-        <span>🛵 <kbd>F</kbd> 切換機車/超跑</span>
+        <span>🛵 <kbd>V</kbd> 換車 · <kbd>F</kbd> 上下車</span>
         <span>🗺️ <kbd>M</kbd> 全屏 GPS 大地圖</span>
         <span>🥚 <kbd>E</kbd> 吃茶葉蛋補血</span>
       </div>
@@ -143,7 +143,7 @@
       <div class="vehicle-badge" id="hud-veh-badge">
         <span class="veh-icon">🛵</span>
         <span class="veh-name" id="hud-veh-name">勁戰 125 經典機車</span>
-        <span class="veh-switch-tip">[按 F 換超跑]</span>
+        <span class="veh-switch-tip">[點擊或按 V 換車]</span>
       </div>
       <div class="bar-container">
         <div class="bar-label">HP</div>
@@ -240,6 +240,7 @@
       <button class="helper-btn btn-act-radio" id="btn-radio"><kbd>N</kbd> 電台</button>
       <button class="helper-btn btn-act-landmark" id="btn-landmark"><kbd>T</kbd> 傳送</button>
       <button class="helper-btn btn-act-map" id="btn-open-map"><kbd>M</kbd> 地圖</button>
+      <button class="helper-btn btn-act-switch-veh" id="btn-switch-type"><kbd>V</kbd> 換車</button>
       <button class="helper-btn btn-act-veh" id="btn-swap-veh"><kbd>F</kbd> <span id="btn-veh-txt">下車</span></button>
       <button class="helper-btn btn-act-reset" id="btn-reset"><kbd>R</kbd> 翻正</button>
       <button class="helper-btn btn-act-settings" id="btn-settings"><kbd>O</kbd> 設定</button>
@@ -309,8 +310,12 @@
           <span class="m-circle-txt">任務</span>
         </button>
         <button id="btn-m-swap" class="btn-m-circle btn-m-cyan" aria-label="切換載具">
-          <span class="m-circle-icon">🛵</span>
+          <span class="m-circle-icon" id="btn-m-swap-icon">🛵</span>
           <span class="m-circle-txt">換車</span>
+        </button>
+        <button id="btn-m-foot" class="btn-m-circle btn-m-blue" aria-label="上下車">
+          <span class="m-circle-icon" id="btn-m-foot-icon">🚶</span>
+          <span class="m-circle-txt" id="btn-m-foot-txt">下車</span>
         </button>
         <button id="btn-m-heal" class="btn-m-circle btn-m-green" aria-label="吃蛋補血">
           <span class="m-circle-icon">🥚</span>

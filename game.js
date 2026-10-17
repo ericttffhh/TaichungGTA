@@ -1894,6 +1894,16 @@ class Vehicle {
     };
     if (badgeName) badgeName.textContent = titles[this.type];
     if (badgeIcon) badgeIcon.textContent = icons[this.type];
+
+    // 同步更新手機版換車按鈕圖標
+    const mSwapIcon = document.getElementById('btn-m-swap-icon');
+    if (mSwapIcon) mSwapIcon.textContent = icons[this.type];
+
+    // 更新引擎運作音效
+    soundManager.updateEngine(this.type, this.speed, false, false, false, 0.016);
+
+    // 彈出 Toast 提示
+    window.gameApp?.showToast?.(`🚗 已更換載具為【${titles[this.type]}】！(按 V 或點擊載具按鈕隨時換車)`);
   }
 
   getVehicleName() {
@@ -3956,6 +3966,166 @@ class RailwayTrainSystem {
     this.buildViaduct(this.mrtPath, 'mrt');
   }
 
+  // ★ 高擬真無搖枕雙軸鐵路轉向架 (2-Axle Bolsterless Train Bogie)
+  buildBogie(gauge = 1.067, isMRT = false) {
+    const bogie = new THREE.Group();
+    const frameMat = new THREE.MeshStandardMaterial({ color: 0x212529, roughness: 0.75, metalness: 0.4 });
+    const steelWheelMat = new THREE.MeshStandardMaterial({ color: 0xd0d7de, roughness: 0.18, metalness: 0.95 });
+    const springMat = new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.6, metalness: 0.5 });
+    const rubberMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 });
+    const brakeMat = new THREE.MeshStandardMaterial({ color: 0x78909c, roughness: 0.35, metalness: 0.8 });
+
+    // 1. 轉向架左右主側梁 (Side Frames)
+    const frameWidth = gauge + 0.36;
+    [-frameWidth / 2, frameWidth / 2].forEach(fx => {
+      const sideBeam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 2.35), frameMat);
+      sideBeam.position.set(fx, 0.42, 0);
+      bogie.add(sideBeam);
+
+      [-0.55, 0.55].forEach(wz => {
+        const cutout = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.1, 0.38), frameMat);
+        cutout.position.set(fx, 0.42, wz);
+        bogie.add(cutout);
+      });
+    });
+
+    // 2. 轉向架中梁橫梁 (Center Transom)
+    const transom = new THREE.Mesh(new THREE.BoxGeometry(frameWidth + 0.1, 0.18, 0.45), frameMat);
+    transom.position.set(0, 0.42, 0);
+    bogie.add(transom);
+
+    // 3. 雙軸四輪帶輪緣鋼軌車輪 (4 Flanged Steel Wheelsets on 2 Axles)
+    const wheelRadius = 0.43; // 直徑 860mm
+    const wheelTreadW = 0.12;
+    const wheelFlangeW = 0.035;
+
+    [-1.05, 1.05].forEach(axleZ => {
+      const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, frameWidth + 0.12, 12), steelWheelMat);
+      axle.rotation.z = Math.PI / 2;
+      axle.position.set(0, wheelRadius, axleZ);
+      bogie.add(axle);
+
+      [-0.32, 0.32].forEach(dx => {
+        const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 16), brakeMat);
+        disc.rotation.z = Math.PI / 2;
+        disc.position.set(dx, wheelRadius, axleZ);
+        bogie.add(disc);
+      });
+
+      [-gauge / 2, gauge / 2].forEach((wx, sideIdx) => {
+        const tread = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelTreadW, 16), steelWheelMat);
+        tread.rotation.z = Math.PI / 2;
+        tread.position.set(wx, wheelRadius, axleZ);
+        bogie.add(tread);
+
+        const flangeOffset = sideIdx === 0 ? (wheelTreadW / 2 + wheelFlangeW / 2) : -(wheelTreadW / 2 + wheelFlangeW / 2);
+        const flange = new THREE.Mesh(new THREE.CylinderGeometry(wheelRadius + 0.035, wheelRadius + 0.035, wheelFlangeW, 16), steelWheelMat);
+        flange.rotation.z = Math.PI / 2;
+        flange.position.set(wx + flangeOffset, wheelRadius, axleZ);
+        bogie.add(flange);
+
+        const boxX = sideIdx === 0 ? -frameWidth / 2 : frameWidth / 2;
+        const axleBox = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 0.24), frameMat);
+        axleBox.position.set(boxX, wheelRadius, axleZ);
+        bogie.add(axleBox);
+
+        [-0.14, 0.14].forEach(sz => {
+          const spring = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.16, 8), springMat);
+          spring.position.set(boxX, wheelRadius + 0.14, axleZ + sz);
+          bogie.add(spring);
+        });
+      });
+    });
+
+    // 4. 二系空氣彈簧大橡膠氣囊 (Secondary Air Springs)
+    [-frameWidth / 2, frameWidth / 2].forEach(asX => {
+      const airBellows = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.2, 12), rubberMat);
+      airBellows.position.set(asX, 0.58, 0);
+      bogie.add(airBellows);
+
+      const damper = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), springMat);
+      damper.position.set(asX * 0.9, 0.52, 0.2);
+      damper.rotation.z = 0.35;
+      bogie.add(damper);
+    });
+
+    // 5. 捷運專用：750V DC 第三軌側集電靴 (Third Rail Collector Shoe)
+    if (isMRT) {
+      [-frameWidth / 2 - 0.24, frameWidth / 2 + 0.24].forEach((shoeX, sIdx) => {
+        const shoeArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 0.8), frameMat);
+        shoeArm.position.set(shoeX, 0.32, 0);
+        bogie.add(shoeArm);
+
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.38),
+          new THREE.MeshStandardMaterial({ color: 0xffd54f, roughness: 0.3, metalness: 0.8 }));
+        shoe.position.set(shoeX + (sIdx === 0 ? -0.1 : 0.1), 0.28, 0);
+        bogie.add(shoe);
+      });
+    }
+
+    return bogie;
+  }
+
+  // ★ 車底機電設備箱群 (Underfloor VVVF, Air Tanks, SIV & Batteries)
+  buildUnderfloorEquipment(isEMU = true) {
+    const eqGroup = new THREE.Group();
+    const boxMat = new THREE.MeshStandardMaterial({ color: 0x1f2429, roughness: 0.7, metalness: 0.3 });
+    const louverMat = new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.5 });
+    const tankMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.4, metalness: 0.6 });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xffb300, roughness: 0.3, metalness: 0.7 });
+
+    const vvvf = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.62, 2.6), boxMat);
+    vvvf.position.set(0, 0.42, 0.2);
+    eqGroup.add(vvvf);
+
+    [-0.84, 0.84].forEach(lx => {
+      const louver = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.45, 2.2), louverMat);
+      louver.position.set(lx, 0.42, 0.2);
+      eqGroup.add(louver);
+    });
+
+    [-0.55, 0.55].forEach(tx => {
+      const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 1.9, 12), tankMat);
+      tank.rotation.x = Math.PI / 2;
+      tank.position.set(tx, 0.38, -1.8);
+      eqGroup.add(tank);
+
+      const valve = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.12, 8), brassMat);
+      valve.position.set(tx, 0.58, -1.8);
+      eqGroup.add(valve);
+    });
+
+    const siv = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.52, 1.4), boxMat);
+    siv.position.set(0, 0.45, 2.1);
+    eqGroup.add(siv);
+
+    return eqGroup;
+  }
+
+  // ★ 車廂風擋橡膠皺摺與密著式聯結器 (Inter-Car Gangway Bellows & Coupler)
+  buildGangwayBellows() {
+    const gw = new THREE.Group();
+    const rubberMat = new THREE.MeshStandardMaterial({ color: 0x14181c, roughness: 0.95 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x546e7a, roughness: 0.4, metalness: 0.8 });
+
+    for (let f = -2; f <= 2; f++) {
+      const fold = new THREE.Mesh(new THREE.BoxGeometry(2.35 - Math.abs(f) * 0.04, 2.9 - Math.abs(f) * 0.04, 0.08), rubberMat);
+      fold.position.set(0, 1.9, f * 0.11);
+      gw.add(fold);
+    }
+
+    const coupler = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.75), steelMat);
+    coupler.position.set(0, 0.82, 0);
+    gw.add(coupler);
+
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.22, 8), steelMat);
+    head.rotation.x = Math.PI / 2;
+    head.position.set(0, 0.82, 0.36);
+    gw.add(head);
+
+    return gw;
+  }
+
   buildViaduct(points, type = 'tra') {
     const isTRA = type === 'tra';
 
@@ -4000,7 +4170,7 @@ class RailwayTrainSystem {
     const railMat = new THREE.MeshStandardMaterial({
       color: 0xe2e8f0,
       roughness: 0.18,
-      metalness: 0.92
+      metalness: 0.95
     });
     const pierMat = new THREE.MeshStandardMaterial({
       color: 0xa6b1b9,
@@ -4021,12 +4191,19 @@ class RailwayTrainSystem {
       roughness: 0.45,
       metalness: 0.75
     });
+    const safetyYellowMat = new THREE.MeshStandardMaterial({
+      color: 0xfbc02d,
+      roughness: 0.35,
+      metalness: 0.4
+    });
     const insulatorMat = new THREE.MeshStandardMaterial({
       color: 0xd84315,
       roughness: 0.35,
       metalness: 0.3
     });
     const wireMat = new THREE.MeshBasicMaterial({ color: 0x37474f });
+    const baliseMat = new THREE.MeshStandardMaterial({ color: 0xffd600, roughness: 0.4 });
+    const cableTroughMat = new THREE.MeshStandardMaterial({ color: 0x607d8b, roughness: 0.6, metalness: 0.3 });
 
     for (let i = 0; i < points.length - 1; i++) {
       const p1 = points[i];
@@ -4079,38 +4256,58 @@ class RailwayTrainSystem {
         const topCap = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.08, dist), catenarySteelMat);
         topCap.position.set(s * 6.0, 2.14, 0);
         segGroup.add(topCap);
+
+        // ★ 亮黃色工業防墜鋼管護欄 (Industrial Yellow Safety Handrails)
+        const railTop = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, dist), safetyYellowMat);
+        railTop.position.set(s * 5.15, 1.15, 0);
+        segGroup.add(railTop);
+
+        const railMid = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, dist), safetyYellowMat);
+        railMid.position.set(s * 5.15, 0.68, 0);
+        segGroup.add(railMid);
       });
 
-      // 隔音牆立柱 (每 6 米一根)
-      const postSteps = Math.max(1, Math.floor(dist / 6.0));
+      // 隔音牆與欄杆立柱 (每 4 米一根)
+      const postSteps = Math.max(1, Math.floor(dist / 4.0));
       for (let p = 0; p <= postSteps; p++) {
         const pz = -dist / 2 + (p / postSteps) * dist;
         [-1, 1].forEach(s => {
           const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, 1.55, 0.16), catenarySteelMat);
           post.position.set(s * 6.0, 1.42, pz);
           segGroup.add(post);
+
+          const rPost = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.1, 0.06), safetyYellowMat);
+          rPost.position.set(s * 5.15, 0.65, pz);
+          segGroup.add(rPost);
         });
       }
 
-      // C. 碎石道碴床與維修走道
-      const ballast = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.18, dist), ballastMat);
-      ballast.position.set(0, 0.09, 0);
+      // C. 碎石道碴床、維修走道與高壓電纜槽 (Cable Troughs)
+      const ballast = new THREE.Mesh(new THREE.BoxGeometry(8.6, 0.22, dist), ballastMat);
+      ballast.position.set(0, 0.11, 0);
       segGroup.add(ballast);
 
-      const walkway = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.06, dist), barrierBaseMat);
-      walkway.position.set(0, 0.17, 0);
+      const walkway = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, dist), barrierBaseMat);
+      walkway.position.set(0, 0.19, 0);
       segGroup.add(walkway);
 
+      // 連續鍍鋅電纜槽 (Cable Trough with covers)
+      [-4.6, 4.6].forEach(cx => {
+        const trough = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.14, dist), cableTroughMat);
+        trough.position.set(cx, 0.22, 0);
+        segGroup.add(trough);
+      });
+
       // D. 雙線預力混凝土枕木 (PC Sleepers)
-      const sleeperSteps = Math.max(1, Math.floor(dist / 2.2));
+      const sleeperSteps = Math.max(1, Math.floor(dist / 2.0));
       const sleeperGeoms = [];
-      const singleSleeper = new THREE.BoxGeometry(2.35, 0.14, 0.24);
+      const singleSleeper = new THREE.BoxGeometry(2.35, 0.16, 0.26);
 
       for (let sl = 0; sl <= sleeperSteps; sl++) {
         const slz = -dist / 2 + (sl / sleeperSteps) * dist;
         [-2.05, 2.05].forEach(ox => {
           const sg = singleSleeper.clone();
-          sg.translate(ox, 0.18, slz);
+          sg.translate(ox, 0.19, slz);
           sleeperGeoms.push(sg);
         });
       }
@@ -4124,11 +4321,56 @@ class RailwayTrainSystem {
       // E. 雙線四軌 60kg 拋光鋼軌
       [-2.05, 2.05].forEach(trackCenter => {
         [-0.72, 0.72].forEach(gaugeOffset => {
-          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, dist), railMat);
-          rail.position.set(trackCenter + gaugeOffset, 0.31, 0);
+          const rail = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.18, dist), railMat);
+          rail.position.set(trackCenter + gaugeOffset, 0.33, 0);
           segGroup.add(rail);
         });
+
+        // ★ ATP 地上感應子 (Eurobalise) 每 60 米放置一組
+        const baliseSteps = Math.max(1, Math.floor(dist / 60.0));
+        for (let b = 1; b <= baliseSteps; b++) {
+          const bz = -dist / 2 + (b / (baliseSteps + 1)) * dist;
+          const balise = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.06, 0.58), baliseMat);
+          balise.position.set(trackCenter, 0.32, bz);
+          segGroup.add(balise);
+        }
       });
+
+      // 4 燈式鐵路色燈號誌機 (Color Light Signal)
+      if (isTRA && dist > 70) {
+        const sigGroup = new THREE.Group();
+        sigGroup.position.set(3.8, 0.4, 0);
+
+        const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 3.8, 10), catenarySteelMat);
+        mast.position.y = 1.9;
+        sigGroup.add(mast);
+
+        const sigBox = new THREE.Mesh(new THREE.BoxGeometry(0.32, 1.25, 0.22), catenarySteelMat);
+        sigBox.position.set(0, 3.2, 0);
+        sigGroup.add(sigBox);
+
+        // 號誌燈鏡頭 (綠/黃/紅/黃)
+        [-0.42, -0.14, 0.14, 0.42].forEach((ly, lIdx) => {
+          const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.14, 10), catenarySteelMat);
+          hood.rotation.x = Math.PI / 2;
+          hood.position.set(0, 3.2 + ly, 0.15);
+          sigGroup.add(hood);
+
+          const isGreen = lIdx === 0;
+          const lensColor = isGreen ? 0x00e676 : 0x222222;
+          const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.04, 10),
+            new THREE.MeshStandardMaterial({
+              color: lensColor,
+              emissive: isGreen ? 0x00e676 : 0x000000,
+              emissiveIntensity: isGreen ? 2.5 : 0
+            }));
+          lens.rotation.x = Math.PI / 2;
+          lens.position.set(0, 3.2 + ly, 0.2);
+          sigGroup.add(lens);
+        });
+
+        segGroup.add(sigGroup);
+      }
 
       // 捷運綠線：添加 750V 第三軌
       if (!isTRA) {
@@ -4142,50 +4384,100 @@ class RailwayTrainSystem {
 
       // F. 門型電車線電桿鋼桁架與電網 (TRA 25kV 電氣化)
       if (isTRA) {
-        const gantrySteps = Math.max(1, Math.floor(dist / 42.0));
+        const gantrySteps = Math.max(1, Math.floor(dist / 38.0));
         for (let g = 0; g <= gantrySteps; g++) {
           const gz = -dist / 2 + (g / gantrySteps) * dist;
 
-          [-5.3, 5.3].forEach(gx => {
-            const col = new THREE.Mesh(new THREE.BoxGeometry(0.26, 6.4, 0.26), catenarySteelMat);
-            col.position.set(gx, 3.2, gz);
+          [-5.3, 5.3].forEach((gx, gIdx) => {
+            const col = new THREE.Mesh(new THREE.BoxGeometry(0.26, 6.6, 0.26), catenarySteelMat);
+            col.position.set(gx, 3.3, gz);
             segGroup.add(col);
+
+            if (g % 3 === 0) {
+              const weights = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 1.6, 8),
+                new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.7 }));
+              weights.position.set(gx + (gIdx === 0 ? -0.32 : 0.32), 2.8, gz);
+              segGroup.add(weights);
+            }
           });
 
           const beamTop = new THREE.Mesh(new THREE.BoxGeometry(11.2, 0.32, 0.32), catenarySteelMat);
-          beamTop.position.set(0, 6.0, gz);
+          beamTop.position.set(0, 6.2, gz);
           segGroup.add(beamTop);
 
           const beamBottom = new THREE.Mesh(new THREE.BoxGeometry(11.0, 0.16, 0.16), catenarySteelMat);
-          beamBottom.position.set(0, 5.35, gz);
+          beamBottom.position.set(0, 5.45, gz);
           segGroup.add(beamBottom);
 
           [-2.05, 2.05].forEach(tx => {
-            const dropArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.8, 0.1), catenarySteelMat);
-            dropArm.position.set(tx, 5.2, gz);
+            const dropArm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.85, 0.1), catenarySteelMat);
+            dropArm.position.set(tx, 5.3, gz);
             segGroup.add(dropArm);
 
             const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.45, 8), insulatorMat);
-            ins.position.set(tx, 4.65, gz);
+            ins.position.set(tx, 4.75, gz);
             segGroup.add(ins);
           });
         }
 
         [-2.05, 2.05].forEach(tx => {
           const contactWire = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, dist), wireMat);
-          contactWire.position.set(tx, 4.4, 0);
+          contactWire.position.set(tx, 4.5, 0);
           segGroup.add(contactWire);
 
           const messengerWire = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, dist), wireMat);
-          messengerWire.position.set(tx, 5.4, 0);
+          messengerWire.position.set(tx, 5.5, 0);
           segGroup.add(messengerWire);
         });
       }
 
+      // ★ G. 臺中車站高架島式月台 (Taichung Station Island Platform)
+      const distToTaichungStation = mid.distanceTo(new THREE.Vector3(4, 14.5, 156));
+      if (isTRA && distToTaichungStation < 130) {
+        const platGroup = new THREE.Group();
+        platGroup.position.set(0, 0, 0);
+
+        const platDeck = new THREE.Mesh(new THREE.BoxGeometry(3.6, 1.15, dist),
+          new THREE.MeshStandardMaterial({ color: 0xeeeeee, roughness: 0.35 }));
+        platDeck.position.set(0, 0.85, 0);
+        platGroup.add(platDeck);
+
+        [-1.72, 1.72].forEach(tx => {
+          const tactile = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.02, dist),
+            new THREE.MeshStandardMaterial({ color: 0xffd600, roughness: 0.4 }));
+          tactile.position.set(tx, 1.43, 0);
+          platGroup.add(tactile);
+        });
+
+        const pidsBox = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.55, 0.22),
+          new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 }));
+        pidsBox.position.set(0, 3.4, 0);
+        platGroup.add(pidsBox);
+
+        const pidsLed = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.42, 0.24),
+          new THREE.MeshStandardMaterial({ color: 0xff9100, emissive: 0xff9100, emissiveIntensity: 2.8 }));
+        pidsLed.position.set(0, 3.4, 0);
+        platGroup.add(pidsLed);
+
+        const signBox = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.7, 0.15),
+          new THREE.MeshStandardMaterial({ color: 0x01579b, emissive: 0x0288d1, emissiveIntensity: 0.4 }));
+        signBox.position.set(0, 2.6, 12);
+        platGroup.add(signBox);
+
+        [-15, 15].forEach(bz => {
+          const bench = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.45, 0.5),
+            new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.3, metalness: 0.8 }));
+          bench.position.set(0, 1.65, bz);
+          platGroup.add(bench);
+        });
+
+        segGroup.add(platGroup);
+      }
+
       this.scene.add(segGroup);
 
-      // G. 擬真八角雙柱式橋墩與橫梁帽梁
-      const pierSteps = Math.max(1, Math.floor(dist / 46.0));
+      // H. 擬真八角雙柱式橋墩、墩頂防震擋塊與橫梁帽梁
+      const pierSteps = Math.max(1, Math.floor(dist / 42.0));
       for (let s = 0; s <= pierSteps; s++) {
         const t = s / pierSteps;
         const px = p1.x + (p2.x - p1.x) * t;
@@ -4196,9 +4488,15 @@ class RailwayTrainSystem {
         pierGroup.position.set(px, 0, pz);
         pierGroup.rotation.y = angle;
 
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(8.6, 1.4, 2.8), capMat);
-        cap.position.set(0, pierH - 0.7, 0);
+        const cap = new THREE.Mesh(new THREE.BoxGeometry(8.8, 1.45, 2.8), capMat);
+        cap.position.set(0, pierH - 0.72, 0);
         pierGroup.add(cap);
+
+        [-4.2, 4.2].forEach(sx => {
+          const stopper = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.95, 2.6), capMat);
+          stopper.position.set(sx, pierH + 0.25, 0);
+          pierGroup.add(stopper);
+        });
 
         [-2.4, -0.9, 0.9, 2.4].forEach(bx => {
           const pad = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.16, 0.75), bearingMat);
@@ -4206,15 +4504,15 @@ class RailwayTrainSystem {
           pierGroup.add(pad);
         });
 
-        const colHeight = pierH - 1.4;
-        [-2.0, 2.0].forEach(cx => {
+        const colHeight = pierH - 1.45;
+        [-2.1, 2.1].forEach(cx => {
           const col = new THREE.Mesh(new THREE.CylinderGeometry(1.05, 1.25, colHeight, 8), pierMat);
           col.position.set(cx, colHeight / 2, 0);
           pierGroup.add(col);
         });
 
-        const footing = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.6, 3.8), pierMat);
-        footing.position.set(0, 0.3, 0);
+        const footing = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.65, 3.8), pierMat);
+        footing.position.set(0, 0.32, 0);
         pierGroup.add(footing);
 
         this.scene.add(pierGroup);
@@ -4250,90 +4548,234 @@ class RailwayTrainSystem {
     trainGroup.position.set(-2.05, 0.38, 0); // 嚴格平貼行駛在北上側軌道
     root.add(trainGroup);
 
-    const carLen = 14.0;
-    const carW = 3.1;
-    const carH = 3.4;
+    const carLen = 15.6;
+    const carW = 3.08;
+    const carH = 3.42;
 
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xdde2e6, roughness: 0.25, metalness: 0.85 });
-    const greenMat = new THREE.MeshStandardMaterial({ color: 0x43a047, roughness: 0.4 });
-    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf57c00, roughness: 0.4 });
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe0e6eb, roughness: 0.22, metalness: 0.88 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32, roughness: 0.35, metalness: 0.2 });
+    const orangeMat = new THREE.MeshStandardMaterial({ color: 0xf57c00, roughness: 0.35, metalness: 0.2 });
     const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a237e, roughness: 0.5 });
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0d1b2a, roughness: 0.1, metalness: 0.9, transparent: true, opacity: 0.85 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0a1420, roughness: 0.08, metalness: 0.9, transparent: true, opacity: 0.88 });
+    const doorFrameMat = new THREE.MeshStandardMaterial({ color: 0xb0bec5, roughness: 0.4, metalness: 0.7 });
+    const pantoMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.35, metalness: 0.85 });
+    const insMat = new THREE.MeshStandardMaterial({ color: 0xd84315, roughness: 0.3, metalness: 0.4 });
+    const smileMat = new THREE.MeshStandardMaterial({
+      color: 0x00e676,
+      emissive: 0x00e676,
+      emissiveIntensity: 2.8,
+      roughness: 0.2
+    });
+    const pidsMat = new THREE.MeshStandardMaterial({
+      color: 0xff9100,
+      emissive: 0xff9100,
+      emissiveIntensity: 3.2,
+      roughness: 0.1
+    });
 
     [-1, 0, 1].forEach((carIdx) => {
-      const cz = carIdx * (carLen + 0.6);
+      const cz = carIdx * (carLen + 0.65);
       const car = new THREE.Group();
       car.position.set(0, 0, cz);
 
+      // A. 前後雙轉向架 (Bogies under each carriage at ±4.8m)
+      const bogieF = this.buildBogie(1.067, false);
+      bogieF.position.set(0, 0, 4.8);
+      car.add(bogieF);
+
+      const bogieR = this.buildBogie(1.067, false);
+      bogieR.position.set(0, 0, -4.8);
+      car.add(bogieR);
+
+      // B. 車底機電設備箱組
+      const underfloor = this.buildUnderfloorEquipment(true);
+      car.add(underfloor);
+
+      // C. 車體主體 (流線矩形 + 圓角倒角層次)
       const body = new THREE.Mesh(new THREE.BoxGeometry(carW, carH, carLen), bodyMat);
-      body.position.set(0, carH / 2 + 0.4, 0);
+      body.position.set(0, carH / 2 + 0.42, 0);
       car.add(body);
 
+      // 車頂弧形縱梁 (Curved Roof Arch)
+      const roofArch = new THREE.Mesh(new THREE.CylinderGeometry(carW * 0.48, carW * 0.48, carLen * 0.98, 16, 1, false, -Math.PI * 0.4, Math.PI * 0.8), bodyMat);
+      roofArch.rotation.z = Math.PI / 2;
+      roofArch.rotation.y = Math.PI / 2;
+      roofArch.position.set(0, carH + 0.35, 0);
+      car.add(roofArch);
+
+      // D. 車側雙色飄逸彩帶 (經典台鐵綠 + 亮橘線條)
       [-1, 1].forEach(s => {
-        const stripeG = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.24, carLen * 0.96), greenMat);
-        stripeG.position.set(s * (carW / 2 + 0.01), 1.2, 0);
+        const stripeG = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, carLen * 0.98), greenMat);
+        stripeG.position.set(s * (carW / 2 + 0.015), 1.25, 0);
         car.add(stripeG);
 
-        const stripeO = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.16, carLen * 0.96), orangeMat);
-        stripeO.position.set(s * (carW / 2 + 0.012), 1.45, 0);
+        const stripeO = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.14, carLen * 0.98), orangeMat);
+        stripeO.position.set(s * (carW / 2 + 0.018), 1.48, 0);
         car.add(stripeO);
 
-        for (let w = -4; w <= 4; w++) {
-          if (Math.abs(w) === 2) continue;
-          const win = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.1, 1.0), glassMat);
-          win.position.set(s * (carW / 2 + 0.015), 2.2, w * 1.35);
+        // 客室雙開滑塞車門 (每側 3 處)
+        [-4.5, 0, 4.5].forEach(doorZ => {
+          const door = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.05, 1.4), doorFrameMat);
+          door.position.set(s * (carW / 2 + 0.02), 1.55, doorZ);
+          car.add(door);
+
+          [-0.32, 0.32].forEach(pdx => {
+            const doorWin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.9, 0.36), glassMat);
+            doorWin.position.set(s * (carW / 2 + 0.022), 1.85, doorZ + pdx);
+            car.add(doorWin);
+          });
+
+          const dLight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.08),
+            new THREE.MeshStandardMaterial({ color: 0xff1744, emissive: 0xff1744, emissiveIntensity: 2.0 }));
+          dLight.position.set(s * (carW / 2 + 0.025), 2.65, doorZ);
+          car.add(dLight);
+        });
+
+        [-3.0, -1.5, 1.5, 3.0].forEach(winZ => {
+          const win = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.15, 1.1), glassMat);
+          win.position.set(s * (carW / 2 + 0.02), 2.25, winZ);
           car.add(win);
-        }
+        });
       });
 
-      const acUnit = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.4, 3.8), darkMat);
-      acUnit.position.set(0, carH + 0.55, 0);
-      car.add(acUnit);
+      // E. 車頂大型空調空調冷卻室外機組 (Roof HVAC)
+      [-3.2, 3.2].forEach(acZ => {
+        const acUnit = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.42, 3.2), darkMat);
+        acUnit.position.set(0, carH + 0.58, acZ);
+        car.add(acUnit);
 
+        const fanGrille = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.04, 16),
+          new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.9 }));
+        fanGrille.position.set(0, carH + 0.8, acZ);
+        car.add(fanGrille);
+      });
+
+      // F. 車廂連接風擋 (Gangway Bellows between carriages)
+      if (carIdx < 1) {
+        const gangway = this.buildGangwayBellows();
+        gangway.position.set(0, 0, carLen / 2 + 0.32);
+        car.add(gangway);
+      }
+
+      // G. 中間動力車 (Car 0) 裝設高精細單臂集電弓 (Pantograph)
       if (carIdx === 0) {
-        // 單臂菱形集電弓 (Pantograph - 正好接觸架空電車線)
         const pantoGroup = new THREE.Group();
-        pantoGroup.position.set(0, carH + 0.4, -2.5);
-        const pantoMat = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.4, metalness: 0.8 });
+        pantoGroup.position.set(0, carH + 0.45, -2.4);
 
-        const base = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.12, 1.2), pantoMat);
-        pantoGroup.add(base);
+        [[-0.65, -0.5], [0.65, -0.5], [-0.65, 0.5], [0.65, 0.5]].forEach(([ix, iz]) => {
+          const ins = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.28, 8), insMat);
+          ins.position.set(ix, 0.14, iz);
+          pantoGroup.add(ins);
+        });
 
-        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.8, 0.08), pantoMat);
-        arm.position.set(0, 0.4, 0.2);
-        arm.rotation.x = -0.4;
-        pantoGroup.add(arm);
+        const pBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 1.3), pantoMat);
+        pBase.position.set(0, 0.28, 0);
+        pantoGroup.add(pBase);
 
-        const shoe = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.18), pantoMat);
-        shoe.position.set(0, 0.82, 0.35);
+        const lowerArm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.82, 0.09), pantoMat);
+        lowerArm.position.set(0, 0.65, -0.22);
+        lowerArm.rotation.x = -0.45;
+        pantoGroup.add(lowerArm);
+
+        const upperArm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.9, 0.08), pantoMat);
+        upperArm.position.set(0, 1.25, 0.12);
+        upperArm.rotation.x = 0.52;
+        pantoGroup.add(upperArm);
+
+        const shoe = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.07, 0.22), pantoMat);
+        shoe.position.set(0, 1.72, 0.32);
         pantoGroup.add(shoe);
+
+        const vcb = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.45, 8), insMat);
+        vcb.position.set(0.65, 0.45, 1.2);
+        pantoGroup.add(vcb);
 
         car.add(pantoGroup);
       }
 
+      // H. 先頭車 (Car 1) 標誌性「最美微笑號」流線前臉造型！
       if (carIdx === 1) {
-        const nose = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.92, carH * 0.88, 1.8), bodyMat);
-        nose.position.set(0, carH / 2 + 0.35, carLen / 2 + 0.7);
-        nose.rotation.x = -0.15;
-        car.add(nose);
+        const noseGroup = new THREE.Group();
+        noseGroup.position.set(0, 0, carLen / 2);
 
-        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.8, 1.3, 0.1), glassMat);
-        fGlass.position.set(0, 2.3, carLen / 2 + 1.25);
-        fGlass.rotation.x = -0.22;
-        car.add(fGlass);
+        // 1. 三維空氣動力學流線鼻錐 (Sloped Aerodynamic Wedge Nose)
+        const noseUpper = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.94, carH * 0.85, 2.4), bodyMat);
+        noseUpper.position.set(0, carH / 2 + 0.35, 1.15);
+        noseUpper.rotation.x = -0.16;
+        noseGroup.add(noseUpper);
 
-        [-0.85, 0.85].forEach(hx => {
-          const light = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.08),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff9c4, emissiveIntensity: 2.5 }));
-          light.position.set(hx, 1.1, carLen / 2 + 1.45);
-          car.add(light);
+        const noseTip = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.86, carH * 0.45, 1.2), bodyMat);
+        noseTip.position.set(0, 0.82, 2.15);
+        noseTip.rotation.x = -0.32;
+        noseGroup.add(noseTip);
+
+        // 2. ★ 專利標誌「最美微笑曲線 LED 光條 (Signature Smile Light)」！
+        const smileLeft = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.09, 0.06), smileMat);
+        smileLeft.position.set(-0.55, 1.05, 2.48);
+        smileLeft.rotation.z = 0.18;
+        smileLeft.rotation.y = 0.25;
+        noseGroup.add(smileLeft);
+
+        const smileRight = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.09, 0.06), smileMat);
+        smileRight.position.set(0.55, 1.05, 2.48);
+        smileRight.rotation.z = -0.18;
+        smileRight.rotation.y = -0.25;
+        noseGroup.add(smileRight);
+
+        const smileCenter = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.08, 0.06), smileMat);
+        smileCenter.position.set(0, 0.96, 2.56);
+        noseGroup.add(smileCenter);
+
+        // 3. 司機室全景大弧度擋風玻璃 (Cockpit Windscreen)
+        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.82, 1.35, 0.1), glassMat);
+        fGlass.position.set(0, 2.4, 1.95);
+        fGlass.rotation.x = -0.25;
+        noseGroup.add(fGlass);
+
+        [-0.45, 0.45].forEach(wx => {
+          const wiper = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.55, 0.03), darkMat);
+          wiper.position.set(wx, 2.05, 2.15);
+          wiper.rotation.z = -0.35;
+          noseGroup.add(wiper);
         });
 
-        const spot = new THREE.SpotLight(0xfff9c4, 2.5, 60, Math.PI / 6, 0.4);
-        spot.position.set(0, 1.5, carLen / 2 + 1.5);
-        spot.target.position.set(0, 0, carLen / 2 + 40);
-        car.add(spot);
-        car.add(spot.target);
+        // 4. 車頂前方高亮度 LED 數位行先板 (PIDS: 亮橘色「區間快 彰化」)
+        const pids = new THREE.Mesh(new THREE.BoxGeometry(1.65, 0.28, 0.08), pidsMat);
+        pids.position.set(0, 3.25, 1.72);
+        pids.rotation.x = -0.16;
+        noseGroup.add(pids);
+
+        // 5. 雙主 LED 投影頭燈 + 紅色尾燈
+        [-0.92, 0.92].forEach(hx => {
+          const hl = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.08),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfffde7, emissiveIntensity: 3.2 }));
+          hl.position.set(hx, 1.15, 2.4);
+          noseGroup.add(hl);
+
+          const tl = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.09, 0.06),
+            new THREE.MeshStandardMaterial({ color: 0xff1744, emissive: 0xff1744, emissiveIntensity: 2.5 }));
+          tl.position.set(hx * 1.15, 1.05, 2.38);
+          noseGroup.add(tl);
+        });
+
+        const spot = new THREE.SpotLight(0xfffde7, 3.2, 75, Math.PI / 6, 0.35);
+        spot.position.set(0, 1.6, 2.6);
+        spot.target.position.set(0, 0, 50);
+        noseGroup.add(spot);
+        noseGroup.add(spot.target);
+
+        // 6. 前端重型防撞排障器 (Pilot Cowcatcher)
+        const cowcatcher = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.88, 0.32, 0.45), darkMat);
+        cowcatcher.position.set(0, 0.35, 2.3);
+        cowcatcher.rotation.x = -0.3;
+        noseGroup.add(cowcatcher);
+
+        const coupler = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.22, 0.65),
+          new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.4, metalness: 0.8 }));
+        coupler.position.set(0, 0.58, 2.62);
+        noseGroup.add(coupler);
+
+        car.add(noseGroup);
       }
 
       trainGroup.add(car);
@@ -4348,53 +4790,89 @@ class RailwayTrainSystem {
     mrtGroup.position.set(-2.05, 0.38, 0); // 行駛在捷運單側專用軌道
     root.add(mrtGroup);
 
-    const carLen = 12.0;
-    const carW = 2.95;
-    const carH = 3.2;
+    const carLen = 13.8;
+    const carW = 2.98;
+    const carH = 3.3;
 
-    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf5f5f5, roughness: 0.3 });
-    const greenMat = new THREE.MeshStandardMaterial({ color: 0x00897b, roughness: 0.35, metalness: 0.2 });
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1b263b, roughness: 0.1, metalness: 0.8, transparent: true, opacity: 0.85 });
+    const whiteMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25 });
+    const greenMat = new THREE.MeshStandardMaterial({ color: 0x00897b, roughness: 0.3, metalness: 0.25 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x1b263b, roughness: 0.5 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.08, metalness: 0.9, transparent: true, opacity: 0.88 });
+    const mrtPidsMat = new THREE.MeshStandardMaterial({ color: 0x00e676, emissive: 0x00e676, emissiveIntensity: 3.0 });
 
     [-1, 1].forEach((carIdx) => {
-      const cz = carIdx * (carLen / 2 + 0.3);
+      const cz = carIdx * (carLen / 2 + 0.4);
       const car = new THREE.Group();
       car.position.set(0, 0, cz);
 
+      // 雙無搖枕轉向架 (帶 750V DC 第三軌集電靴)
+      const bogieF = this.buildBogie(1.435, true);
+      bogieF.position.set(0, 0, 3.8);
+      car.add(bogieF);
+
+      const bogieR = this.buildBogie(1.435, true);
+      bogieR.position.set(0, 0, -3.8);
+      car.add(bogieR);
+
+      // 車底設備
+      const underfloor = this.buildUnderfloorEquipment(false);
+      car.add(underfloor);
+
+      // 車身
       const body = new THREE.Mesh(new THREE.BoxGeometry(carW, carH, carLen), whiteMat);
-      body.position.set(0, carH / 2 + 0.35, 0);
+      body.position.set(0, carH / 2 + 0.38, 0);
       car.add(body);
 
+      // 「蒔綠新芽」雙側綠色彩帶與下裙板
       [-1, 1].forEach(s => {
-        const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.45, carLen), greenMat);
-        skirt.position.set(s * (carW / 2 + 0.01), 0.55, 0);
+        const skirt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.48, carLen), greenMat);
+        skirt.position.set(s * (carW / 2 + 0.015), 0.6, 0);
         car.add(skirt);
 
-        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.18, carLen), greenMat);
-        stripe.position.set(s * (carW / 2 + 0.012), 1.4, 0);
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.22, carLen), greenMat);
+        stripe.position.set(s * (carW / 2 + 0.018), 1.45, 0);
         car.add(stripe);
 
-        const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.95, carLen * 0.85), glassMat);
-        sideWin.position.set(s * (carW / 2 + 0.015), 2.1, 0);
-        car.add(sideWin);
+        // 側窗與車門
+        [-3.6, 0, 3.6].forEach(doorZ => {
+          const door = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.0, 1.35), darkMat);
+          door.position.set(s * (carW / 2 + 0.02), 1.5, doorZ);
+          car.add(door);
+
+          const dw = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.85, 0.32), glassMat);
+          dw.position.set(s * (carW / 2 + 0.022), 1.8, doorZ);
+          car.add(dw);
+        });
+
+        [-1.8, 1.8].forEach(wz => {
+          const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 1.05, 1.55), glassMat);
+          sideWin.position.set(s * (carW / 2 + 0.02), 2.15, wz);
+          car.add(sideWin);
+        });
       });
 
+      // 先頭子彈頭駕駛室 (Car 1)
       if (carIdx === 1) {
-        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.85, 1.2, 0.1), glassMat);
-        fGlass.position.set(0, 2.1, carLen / 2 + 0.1);
-        fGlass.rotation.x = -0.15;
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.94, carH * 0.88, 1.6), whiteMat);
+        cab.position.set(0, carH / 2 + 0.35, carLen / 2 + 0.7);
+        cab.rotation.x = -0.18;
+        car.add(cab);
+
+        const fGlass = new THREE.Mesh(new THREE.BoxGeometry(carW * 0.86, 1.35, 0.1), glassMat);
+        fGlass.position.set(0, 2.25, carLen / 2 + 1.25);
+        fGlass.rotation.x = -0.22;
         car.add(fGlass);
 
-        const led = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.22, 0.06),
-          new THREE.MeshStandardMaterial({ color: 0x00e676, emissive: 0x00e676, emissiveIntensity: 2.0 }));
-        led.position.set(0, 2.85, carLen / 2 + 0.12);
-        car.add(led);
+        const pids = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.26, 0.08), mrtPidsMat);
+        pids.position.set(0, 3.1, carLen / 2 + 1.28);
+        pids.rotation.x = -0.18;
+        car.add(pids);
 
-        [-0.7, 0.7].forEach(hx => {
-          const l = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.12, 0.06),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.2 }));
-          l.position.set(hx, 0.95, carLen / 2 + 0.12);
-          car.add(l);
+        [-0.78, 0.78].forEach(hx => {
+          const hl = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.06),
+            new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 2.8 }));
+          hl.position.set(hx, 1.05, carLen / 2 + 1.45);
+          car.add(hl);
         });
       }
 
@@ -4403,6 +4881,7 @@ class RailwayTrainSystem {
 
     return root;
   }
+
 
   update(dt, activePos) {
     this.soundTimer += dt;
@@ -4863,8 +5342,8 @@ export class TaichungRushApp {
         this.togglePlayerMode();
       }
 
-      if (state && code === 'KeyV') {
-        this.vehicle.toggleVehicleType();
+      if (state && (code === 'KeyV' || key === 'v' || key === 'V')) {
+        this.switchVehicle();
       }
 
       if (state && (code === 'KeyO' || key === 'o' || key === 'O')) {
@@ -4948,6 +5427,8 @@ export class TaichungRushApp {
       this.teleportToLandmark();
       this.closeTeleportModal();
     });
+    document.getElementById('btn-switch-type')?.addEventListener('click', () => this.switchVehicle());
+    document.getElementById('hud-veh-badge')?.addEventListener('click', () => this.switchVehicle());
     document.getElementById('btn-swap-veh')?.addEventListener('click', () => this.togglePlayerMode());
     document.getElementById('btn-weather')?.addEventListener('click', () => this.toggleWeather());
     document.getElementById('btn-food')?.addEventListener('click', () => {
@@ -5150,7 +5631,8 @@ export class TaichungRushApp {
     bindTouchBtn('btn-m-settings', () => this.toggleSettingsModal());
     bindTouchBtn('btn-m-fullscreen', () => this.toggleFullscreen());
     bindTouchBtn('btn-m-mission', () => this.gtaManager?.triggerMission());
-    bindTouchBtn('btn-m-swap', () => this.togglePlayerMode());
+    bindTouchBtn('btn-m-swap', () => this.switchVehicle());
+    bindTouchBtn('btn-m-foot', () => this.togglePlayerMode());
     bindTouchBtn('btn-m-heal', () => this.eatEgg());
     bindTouchBtn('btn-m-horn', () => this.gtaManager?.triggerHorn());
     bindTouchBtn('btn-m-shoot', () => this.gtaManager?.shootGun());
@@ -5370,6 +5852,14 @@ export class TaichungRushApp {
     }
   }
 
+  // ★ 快捷換車控制 (若在徒步狀態下自動上車並切換載具型號)
+  switchVehicle() {
+    if (this.playerMode === 'onfoot') {
+      this.togglePlayerMode('vehicle');
+    }
+    this.vehicle.toggleVehicleType();
+  }
+
   // ★ 切換主角人物操作模式 (載具模式 vs 步態人物模式)
   togglePlayerMode(forceMode = null) {
     const nextMode = forceMode || (this.playerMode === 'vehicle' ? 'onfoot' : 'vehicle');
@@ -5379,6 +5869,8 @@ export class TaichungRushApp {
     const vehTxt = document.getElementById('btn-veh-txt');
     const setModeVeh = document.getElementById('set-mode-vehicle');
     const setModeFoot = document.getElementById('set-mode-onfoot');
+    const mFootIcon = document.getElementById('btn-m-foot-icon');
+    const mFootTxt = document.getElementById('btn-m-foot-txt');
 
     if (this.playerMode === 'onfoot') {
       const carPos = this.vehicle.meshGroup.position;
@@ -5396,6 +5888,8 @@ export class TaichungRushApp {
       soundManager.updateEngine(this.vehicle.type, 0, false, false, false, 0.016);
 
       if (vehTxt) vehTxt.textContent = '上車';
+      if (mFootIcon) mFootIcon.textContent = '🚗';
+      if (mFootTxt) mFootTxt.textContent = '上車';
       if (setModeVeh) setModeVeh.classList.remove('active');
       if (setModeFoot) setModeFoot.classList.add('active');
 
@@ -5415,13 +5909,23 @@ export class TaichungRushApp {
       this.character.mesh.visible = false;
 
       if (vehTxt) vehTxt.textContent = '下車';
+      if (mFootIcon) mFootIcon.textContent = '🚶';
+      if (mFootTxt) mFootTxt.textContent = '下車';
       if (setModeVeh) setModeVeh.classList.add('active');
       if (setModeFoot) setModeFoot.classList.remove('active');
 
       const vehBadge = document.getElementById('hud-veh-name');
       if (vehBadge) vehBadge.textContent = this.vehicle.getVehicleName();
       const badgeIcon = document.querySelector('.veh-icon');
-      if (badgeIcon) badgeIcon.textContent = this.vehicle.type === 'scooter' ? '🛵' : '🏎️';
+      const icons = {
+        scooter: '🛵',
+        truck: '🚚',
+        bus: '🚌',
+        supercar: '🏎️',
+        police: '🚔',
+        taxi: '🚕'
+      };
+      if (badgeIcon) badgeIcon.textContent = icons[this.vehicle.type] || '🚗';
 
       soundManager.playVehicleSwitch();
       this.showToast(`🚗 已登上【${this.vehicle.getVehicleName()}】！(按 F 或載具鍵可自由下車)`);

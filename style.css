@@ -654,6 +654,17 @@ kbd {
   align-items: center;
   gap: 8px;
   backdrop-filter: blur(10px);
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.vehicle-badge:hover {
+  border-color: rgba(0, 242, 254, 0.85);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(0, 242, 254, 0.35);
+}
+.vehicle-badge:active {
+  transform: scale(0.97);
 }
 
 .veh-name { color: var(--rush-cyan); letter-spacing: 0.5px; }
@@ -1615,6 +1626,14 @@ body.touch-device .hud-controls-helper {
 
 .btn-m-orange { border-color: #ff7675; box-shadow: 0 4px 12px rgba(255, 118, 117, 0.3); }
 .btn-m-orange:active { background: rgba(255, 118, 117, 0.35); }
+
+.btn-m-blue { border-color: #0984e3; box-shadow: 0 4px 12px rgba(9, 132, 227, 0.35); }
+.btn-m-blue:active { background: rgba(9, 132, 227, 0.4); }
+
+.btn-act-switch-veh {
+  background: linear-gradient(135deg, rgba(0, 184, 148, 0.9), rgba(0, 206, 201, 0.9));
+  border-color: rgba(0, 206, 201, 0.8);
+}
 
 /* 煞車/油門大按鈕 */
 .mobile-drive-row {
