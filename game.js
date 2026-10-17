@@ -130,7 +130,7 @@ export const LANDMARK_CONFIGS = [
     z: 2553.0,
     rotY: 0,
     boxW: 340, boxH: 28, boxD: 410,
-    exclusionRadius: 215, // 完美覆蓋工學路-高工路-工學六街-工學二街街廓內 59 棟建物範圍
+    exclusionRadius: 285, // 完整涵蓋 340m x 410m 校園全境與高工路邊界，徹底防止任何通用建物覆蓋
     spawnOffset: { x: -79, z: 200 }, // 正對高工路主校門、傳達室與中央迎賓景觀水池軸線
     yOffset: 0.25
   },
