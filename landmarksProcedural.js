@@ -922,7 +922,7 @@ export class ProceduralLandmarks {
 
     const conc = new THREE.MeshLambertMaterial({ map: concreteTexture('#b5b6b2') });
     const darkConc = new THREE.MeshLambertMaterial({ map: concreteTexture('#808e9b') });
-    const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x37474f, roughness: 0.85 });
+    const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x37474f, roughness: 0.85 });
     const steelMat = new THREE.MeshStandardMaterial({ color: 0x455a64, roughness: 0.4, metalness: 0.7 });
     const silverRoofMat = new THREE.MeshStandardMaterial({ color: 0xd2d7df, roughness: 0.25, metalness: 0.65, side: THREE.DoubleSide });
     const solarMat = new THREE.MeshStandardMaterial({ color: 0x0f2744, roughness: 0.2, metalness: 0.8, emissive: 0x071526, emissiveIntensity: 0.3 });
@@ -1311,7 +1311,7 @@ export class ProceduralLandmarks {
 
     // 專屬校園材質調色盤
     const grassMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
-    const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x334155, roughness: 0.85 });
+    const asphaltMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
     const plazaPavingMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#e2e8f0') });
     const concWallMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#cbd5e1') });
     const whiteWallMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc });

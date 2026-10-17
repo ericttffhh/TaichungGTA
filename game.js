@@ -2173,9 +2173,12 @@ class GoogleMapSystem {
       this.render();
     });
     document.getElementById('map-center-player')?.addEventListener('click', () => {
-      if (this.app.vehicle?.body) {
-        this.panX = -this.app.vehicle.body.position.x;
-        this.panY = -this.app.vehicle.body.position.z;
+      const activePos = this.app.playerMode === 'onfoot'
+        ? this.app.character?.mesh?.position
+        : this.app.vehicle?.body?.position;
+      if (activePos) {
+        this.panX = -activePos.x;
+        this.panY = -activePos.z;
         this.zoom = 1.3;
         this.render();
       }
@@ -2463,9 +2466,16 @@ class GoogleMapSystem {
     }
 
     // 7. GPS 導航路線 (Google Maps 藍色路徑)
-    if (this.app.gpsTarget && this.app.vehicle?.body) {
-      const px = this.app.vehicle.body.position.x;
-      const pz = this.app.vehicle.body.position.z;
+    const activePos = this.app.playerMode === 'onfoot'
+      ? this.app.character?.mesh?.position
+      : this.app.vehicle?.body?.position;
+    const activeHeading = this.app.playerMode === 'onfoot'
+      ? (this.app.character?.yaw || 0)
+      : (this.app.vehicle?.meshGroup?.rotation?.y || 0);
+
+    if (this.app.gpsTarget && activePos) {
+      const px = activePos.x;
+      const pz = activePos.z;
       const tx = this.app.gpsTarget.x;
       const tz = this.app.gpsTarget.z;
 
@@ -2500,10 +2510,10 @@ class GoogleMapSystem {
     }
 
     // 8. 玩家位置 (Google Maps 藍色圓點 + 視角光錐)
-    if (this.app.vehicle?.body) {
-      const px = this.app.vehicle.body.position.x;
-      const pz = this.app.vehicle.body.position.z;
-      const heading = this.app.vehicle.meshGroup.rotation.y;
+    if (activePos) {
+      const px = activePos.x;
+      const pz = activePos.z;
+      const heading = activeHeading;
 
       ctx.save();
       ctx.translate(px, pz);
@@ -3089,8 +3099,16 @@ class TrafficSystem {
       }
 
       const pts = road.points;
+      if (v.pointIdx >= pts.length - 1) {
+        v.pointIdx = 0;
+        v.roadIdx = (v.roadIdx + 1) % this.roadSegments.length;
+      }
       const p1 = pts[v.pointIdx];
       const p2 = pts[Math.min(v.pointIdx + 1, pts.length - 1)];
+      if (!p1 || !p2) {
+        v.pointIdx = 0;
+        continue;
+      }
 
       const dx = p2.x - p1.x;
       const dz = p2.z - p1.z;
@@ -3838,8 +3856,16 @@ class PedestrianSystem {
         }
 
         const pts = road.points;
+        if (p.pointIdx >= pts.length - 1) {
+          p.pointIdx = 0;
+          p.roadIdx = (p.roadIdx + 1) % this.roadSegments.length;
+        }
         const p1 = pts[p.pointIdx];
         const p2 = pts[Math.min(p.pointIdx + 1, pts.length - 1)];
+        if (!p1 || !p2) {
+          p.pointIdx = 0;
+          continue;
+        }
 
         const dx = p2.x - p1.x;
         const dz = p2.z - p1.z;
@@ -3942,7 +3968,7 @@ class PedestrianSystem {
               "🎒 台中高工學生(高三黃): 「鮮黃色是高三！正在準備統測跟乙級技術士檢定，中工加油！」",
               "🎒 台中高工學生(制服): 「教官在校門口抓沒紮衣服，快把制服襯衫拉好！我是機三甲的！」",
               "🎒 台中高工學生: 「台中高工讚啦！放學要去西南球場打網球，要一起來PK嗎？」",
-              "🎒 台中高工學生: 「你看校門口林蔭大道兩旁的樟樹長得好茂盛漂亮喔！」"
+              "🎒 台中高工學生: 「你看校門口林蔭大道兩旁的百年老榕樹綠色隧道好壯觀喔！」"
             ];
             const msg = quotes[p.studentVariant % quotes.length];
             if (this.app?.showToast) this.app.showToast(msg);
@@ -7927,11 +7953,13 @@ export class TaichungRushApp {
       });
     }
 
-    // 繪製玩家載具箭頭 (紅色三角)
-    const carHeading = this.vehicle.meshGroup.rotation.y;
+    // 繪製玩家載具/人物箭頭 (紅色三角)
+    const activeHeading = this.playerMode === 'onfoot'
+      ? (this.character?.yaw || 0)
+      : (this.vehicle?.meshGroup?.rotation?.y || 0);
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(-carHeading);
+    ctx.rotate(-activeHeading);
 
     ctx.fillStyle = '#ff3838';
     ctx.beginPath();

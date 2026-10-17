@@ -1108,6 +1108,10 @@ export class SoundSystem {
         this.liveAudio.crossOrigin = 'anonymous';
       }
       this.liveAudio.volume = 1.0;
+      this.liveAudio.onerror = () => {
+        console.warn('[Radio] Stream disconnected or network error, fallback to synth');
+        this.startProceduralSynth(station);
+      };
 
       if (station.type === 'hls') {
         if (typeof window !== 'undefined' && window.Hls && window.Hls.isSupported()) {
