@@ -634,3 +634,4 @@ LandmarkBuilder.buildAsiaGrandHotel = ProceduralLandmarks.buildAsiaGrandHotel;
 LandmarkBuilder.buildScienceMuseum = ProceduralLandmarks.buildScienceMuseum;
 LandmarkBuilder.buildFineArtsMuseum = ProceduralLandmarks.buildFineArtsMuseum;
 LandmarkBuilder.buildDaqingStation = ProceduralLandmarks.buildDaqingStation;
+LandmarkBuilder.buildTaichungIndustrialHighSchool = ProceduralLandmarks.buildTaichungIndustrialHighSchool;

@@ -112,10 +112,25 @@ export const LANDMARK_CONFIGS = [
     builder: 'buildDaqingStation',
     x: -3833.7,
     z: 2118.2,
-    rotY: Math.PI * 0.22,
+    rotY: Math.atan2(-1233.7, 398.2) + Math.PI / 2, // 完美平行臺鐵高架廊道方向，無縫嵌合軌道
     boxW: 240, boxH: 26, boxD: 60,
     exclusionRadius: 140,
     spawnOffset: { x: 15, z: 45 },
+    yOffset: 0.0
+  },
+  {
+    id: 'tcivs',
+    name: '臺中高工 (TCIVS 校區)',
+    category: 'spot',
+    badge: '技職最高學府 · 1938 工業名校',
+    address: '台中市南區高工路191號',
+    builder: 'buildTaichungIndustrialHighSchool',
+    x: -1958.6,
+    z: 2584.8,
+    rotY: 0,
+    boxW: 280, boxH: 26, boxD: 360,
+    exclusionRadius: 180,
+    spawnOffset: { x: 0, z: -175 }, // 高工路正門口路面
     yOffset: 0.25
   },
   {
@@ -3935,9 +3950,11 @@ class RailwayTrainSystem {
   }
 
   initRailwayTracks() {
-    // 臺鐵台中都會區鐵路高架化真實廊道 (太原 ⇄ 台中車站高架月台 ⇄ 五權 ⇄ 大慶 ⇄ 烏日)
-    // 穿過新站挑高鋼骨拱穹 (x: 4, z: 156)，沿著建國路後方專用路廊延伸，絕不跨越站前廣場與台灣大道
+    // 臺鐵台中都會區鐵路高架化真實廊道 (太原 ⇄ 精武 ⇄ 台中車站 ⇄ 五權 ⇄ 大慶 ⇄ 烏日 ⇄ 新烏日)
+    // 兩端延伸至地圖遠方，徹底消除突兀斷頭懸空橋，並穿過新站挑高鋼骨拱穹與大慶共構樞紐
     this.traPath = [
+      new THREE.Vector3(2200, 14.5, -1500),   // 太原端延伸 (平滑融入東北遠方天際線)
+      new THREE.Vector3(1450, 14.5, -1000),   // 精武站方向
       new THREE.Vector3(880, 14.5, -600),
       new THREE.Vector3(620, 14.5, -380),
       new THREE.Vector3(420, 14.5, -210),
@@ -3949,17 +3966,22 @@ class RailwayTrainSystem {
       new THREE.Vector3(-750, 14.5, 800),
       new THREE.Vector3(-1500, 14.5, 1260),
       new THREE.Vector3(-2600, 14.5, 1720),
-      new THREE.Vector3(-3833.7, 14.5, 2118.2) // 大慶高架車站 (台鐵/捷運共構)
+      new THREE.Vector3(-3833.7, 14.5, 2118.2), // 大慶高架車站 (台鐵/捷運共構核心)
+      new THREE.Vector3(-4650, 14.5, 2380),    // 烏日方向延伸 (平滑融入西南遠方)
+      new THREE.Vector3(-5600, 14.5, 2690)     // 新烏日/高鐵台中站方向
     ];
 
-    // 台中捷運綠線高架廊道 (文心路高架走廊：市政府 ⇄ 水安宮 ⇄ 文心森林公園 ⇄ 大慶)
+    // 台中捷運綠線高架廊道 (文心路高架走廊：市政府 ⇄ 水安宮 ⇄ 文心森林公園 ⇄ 大慶 ⇄ 高鐵台中站)
     this.mrtPath = [
-      new THREE.Vector3(-3833.7, 16.5, 2118.2), // 大慶站 (G13)
+      new THREE.Vector3(-5600, 16.5, 2690),    // 高鐵台中站 G17 端延伸
+      new THREE.Vector3(-4650, 16.5, 2380),    // 九德站 G14
+      new THREE.Vector3(-3833.7, 16.5, 2118.2), // 大慶站 G13 轉乘層
       new THREE.Vector3(-3650, 16.5, 1450),
       new THREE.Vector3(-3500, 16.5, 800),
       new THREE.Vector3(-3380, 16.5, 150),
       new THREE.Vector3(-3250, 16.5, -500),
-      new THREE.Vector3(-3150, 16.5, -1200)
+      new THREE.Vector3(-3150, 16.5, -1200),
+      new THREE.Vector3(-3050, 16.5, -2000)    // 北屯/文心中清端延伸
     ];
 
     this.buildViaduct(this.traPath, 'tra');
@@ -4517,6 +4539,76 @@ class RailwayTrainSystem {
 
         this.scene.add(pierGroup);
       }
+    }
+
+    // ★ 關鍵修復：高架橋分段轉折處無縫接合節點 (Seamless Continuous Viaduct Joint Nodes)
+    // 徹底消除兩段箱型梁轉角處的開放式楔形破洞與護欄斷裂，建立 100% 密封連續廊道
+    for (let j = 1; j < points.length - 1; j++) {
+      const pj = points[j];
+      const pPrev = points[j - 1];
+      const pNext = points[j + 1];
+      const angPrev = Math.atan2(pj.x - pPrev.x, pj.z - pPrev.z);
+      const angNext = Math.atan2(pNext.x - pj.x, pNext.z - pj.z);
+
+      const jointGroup = new THREE.Group();
+      jointGroup.position.set(pj.x, pj.y, pj.z);
+
+      // 1. 橋面圓形轉折節點塊 (密封橋面，消弭接縫裂隙)
+      const jointDeck = new THREE.Mesh(new THREE.CylinderGeometry(6.2, 6.2, 0.44, 20), deckMat);
+      jointDeck.position.set(0, -0.21, 0);
+      jointGroup.add(jointDeck);
+
+      // 2. 箱型梁過渡圓錐台 (梯形截面過渡)
+      const jointBoxUpper = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.2, 0.82, 16), deckMat);
+      jointBoxUpper.position.set(0, -0.82, 0);
+      jointGroup.add(jointBoxUpper);
+
+      const jointBoxLower = new THREE.Mesh(new THREE.CylinderGeometry(3.3, 3.3, 0.82, 16), deckMat);
+      jointBoxLower.position.set(0, -1.62, 0);
+      jointGroup.add(jointBoxLower);
+
+      // 3. 道碴層密封圓盤
+      const jointBallast = new THREE.Mesh(new THREE.CylinderGeometry(4.8, 4.8, 0.28, 16), ballastMat);
+      jointBallast.position.set(0, 0.14, 0);
+      jointGroup.add(jointBallast);
+
+      // 4. 外側連續銘黃色安全欄杆與隔音牆連續封閉段
+      [-1, 1].forEach(side => {
+        const barrierArc = new THREE.Mesh(new THREE.CylinderGeometry(6.05, 6.05, 0.65, 12, 1, true), barrierBaseMat);
+        barrierArc.position.set(0, 0.325, 0);
+        jointGroup.add(barrierArc);
+
+        const yellowRailArc = new THREE.Mesh(new THREE.CylinderGeometry(5.12, 5.12, 0.08, 12, 1, true), safetyYellowMat);
+        yellowRailArc.position.set(0, 1.25, 0);
+        jointGroup.add(yellowRailArc);
+      });
+
+      // 5. 專用轉折承重八角雙柱橋墩 (直接承托兩跨梁端)
+      const pierH = pj.y - 1.8;
+      const capAngle = (angPrev + angNext) / 2;
+
+      const pierGroup = new THREE.Group();
+      pierGroup.position.set(pj.x, 0, pj.z);
+      pierGroup.rotation.y = capAngle;
+
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(10.2, 1.6, 4.2), capMat);
+      cap.position.set(0, pierH - 0.8, 0);
+      pierGroup.add(cap);
+
+      [-4.6, 4.6].forEach(sx => {
+        const stopper = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.1, 3.8), capMat);
+        stopper.position.set(sx, pierH + 0.3, 0);
+        pierGroup.add(stopper);
+      });
+
+      [-3.2, 3.2].forEach(cx => {
+        const col = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.45, pierH - 1.6, 8), pierMat);
+        col.position.set(cx, (pierH - 1.6) / 2, 0);
+        pierGroup.add(col);
+      });
+
+      this.scene.add(jointGroup);
+      this.scene.add(pierGroup);
     }
   }
 
@@ -6275,6 +6367,7 @@ export class TaichungRushApp {
       { name: '國立臺灣美術館 (國美館)', icon: '🎨', tag: '當代藝術', desc: '亞洲最大美術館之一與雕塑綠地', x: -2296, z: -341 },
       { name: '臺中國家歌劇院', icon: '🎭', tag: '世界九大新地標', desc: '伊東豊雄曲牆美聲涵洞建築', x: -420, z: -150 },
       { name: '大慶車站 (臺鐵/捷運共構)', icon: '🚆', tag: '捷運綠線', desc: '臺鐵與台中捷運高架共構轉乘樞紐', x: -3833, z: 2118 },
+      { name: '臺中高工 (TCIVS 校區)', icon: '🏫', tag: '技職名校', desc: '工學路與高工路名校 · 400m操場/實習大樓群/齒輪校徽', x: -1958.6, z: 2584.8 },
       { name: '第二市場 (美食街/六角樓)', icon: '🍜', tag: '在地美食', desc: '百年老牌炒麵、東泉辣椒醬、菜頭粿', x: -195, z: 45 },
       { name: '臺灣大道一段 (市中心起點)', icon: '🛣️', tag: '繁華主幹道', desc: '雙向寬闊大馬路、兩側繁華店家騎樓', x: -160, z: 8 },
       { name: '亞洲大飯店 / 榮達大樓', icon: '🏢', tag: '中區地標', desc: '中區歷史摩天樓 · 175m 階梯塔樓', x: -159.6, z: -58.0 }
