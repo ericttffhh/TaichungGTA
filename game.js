@@ -107,16 +107,17 @@ export const LANDMARK_CONFIGS = [
     id: 'daqing_station',
     name: '大慶車站 (臺鐵/捷運綠線 G13)',
     category: 'tra',
-    badge: '臺鐵與台中捷運高架共構轉乘樞紐',
+    badge: '臺鐵與捷運綠線高架共構轉乘樞紐 · 中山醫學大學',
     address: '台中市南區建國北路一段159號',
     builder: 'buildDaqingStation',
     x: -3833.7,
     z: 2118.2,
     rotY: Math.atan2(-1233.7, 398.2) + Math.PI / 2, // 完美平行臺鐵高架廊道方向，無縫嵌合軌道
     boxW: 240, boxH: 26, boxD: 60,
-    exclusionRadius: 140,
+    exclusionRadius: 180,
     spawnOffset: { x: 15, z: 45 },
-    yOffset: 0.0
+    yOffset: 0.0,
+    skipPhysicsBox: true
   },
   {
     id: 'tcivs',
@@ -6924,8 +6925,8 @@ export class TaichungRushApp {
 
           if (!box.isEmpty()) {
             const center = box.getCenter(new THREE.Vector3());
-            // 對於全景校園等已在原點精準排布的程序化大型場景，保持自身地坪零點貼齊，絕不二次位移浮空
-            if (lm.id === 'tcivs') {
+            // 對於全景校園與共構車站等已在原點精準排布的程序化大型場景，保持自身原點與軌道絕對對齊，絕不二次位移
+            if (lm.id === 'tcivs' || lm.id === 'daqing') {
               innerModel.position.set(0, 0, 0);
             } else {
               innerModel.position.x = -center.x;
@@ -6944,16 +6945,18 @@ export class TaichungRushApp {
           this.scene.add(parentGroup);
           this.landmarks.push({ ...lm, model: parentGroup, innerModel });
 
-          // 在 cannon-es 物理世界加入地標靜態碰撞體 (依建物角度偏轉，並內縮 20% 嚴格杜絕伸入馬路形成空氣牆)
-          const lmBody = new CANNON.Body({
-            mass: 0,
-            shape: new CANNON.Box(new CANNON.Vec3((lm.boxW * 0.78) / 2, lm.boxH / 2, (lm.boxD * 0.78) / 2)),
-            position: new CANNON.Vec3(lm.x, lm.boxH / 2, lm.z)
-          });
-          if (lm.rotY) {
-            lmBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), lm.rotY);
+          // 在 cannon-es 物理世界加入地標靜態碰撞體 (高架共構交通樞紐則避免實心巨型包圍盒阻斷地面道路)
+          if (!lm.skipPhysicsBox && lm.id !== 'daqing') {
+            const lmBody = new CANNON.Body({
+              mass: 0,
+              shape: new CANNON.Box(new CANNON.Vec3((lm.boxW * 0.78) / 2, lm.boxH / 2, (lm.boxD * 0.78) / 2)),
+              position: new CANNON.Vec3(lm.x, lm.boxH / 2, lm.z)
+            });
+            if (lm.rotY) {
+              lmBody.quaternion.setFromAxisAngle(new CANNON.Vec3(0, 1, 0), lm.rotY);
+            }
+            this.physicsWorld.addBody(lmBody);
           }
-          this.physicsWorld.addBody(lmBody);
           console.log(`[TaichungRush] 成功放置地標: ${lm.name} 於 (X:${lm.x}, Z:${lm.z})`);
         } catch (err) {
           console.warn(`[TaichungRush] 載入地標失敗 ${lm.name}:`, err);
