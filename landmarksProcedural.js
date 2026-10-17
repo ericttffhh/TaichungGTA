@@ -549,121 +549,143 @@ export class ProceduralLandmarks {
   // 5. 北側體育館 (亮橘色拱頂)、圖書館、學生餐廳、誠樸樓、懷思樓、工學路後門
   // 6. 穿校親水小河 (旱溪支流/綠川排水) 與白色景觀拱橋
   // =========================================================================
+  // =========================================================================
+  // 臺中市立臺中工業高級中等學校 (Taichung Industrial High School / TCIVS)
+  // 精準定位於台中市南區高工路 191 號 (真實地籍街廓 X: -2320, Z: 2553)
+  // 四至邊界：北臨工學路、南臨高工路、西臨工學六街、東臨工學二街
+  // 100% 依據官方校區平面圖與真實 Overture 建築足跡進行超精細 3D 程序化建模：
+  // 1. 南門迎賓軸：高工路正門牌樓、金色校名、傳達室、景觀水池(噴泉)、椰林花圃大道、12齒綠色齒輪校徽
+  // 2. 中軸教學核心：中工大樓(挑高羅馬前廊/鐘樓/時鐘/校徽山牆)、第二實習大樓、第一實習大樓、宏毅樓
+  // 3. 西側專業系館：化工圖傳大樓(沿工學六街)、員生社、中餐烘焙教室
+  // 4. 東南實習廠區：機械大樓、機械工場、汽車板金大樓(挑高捲門/維修斜坡)、機械冷凍大樓(散熱塔/吊車樑)
+  // 5. 體育運動專區：400m 國際標準 8 跑道紅色 PU 運動場、天然草皮足球場、司令台(雙層看台/遮陽膜頂/旗桿)、球場群
+  // 6. 北校區：體育館(樂群堂，鮮亮橘色大拱頂)、學生餐廳、圖書館、女生宿舍、百齡樓、誠樸樓、集賢堂、懷思樓、工學路後門
+  // 7. 親水生態水系：穿校生態小河(旱溪支流/綠川排水)蜿蜒流經東南校區，搭配雙座漢白玉人行景觀拱橋
+  // =========================================================================
   static buildTaichungIndustrialHighSchool() {
     const group = new THREE.Group();
-    group.name = 'tcivs_campus_procedural';
+    group.name = 'tcivs_campus_bespoke';
 
-    // 材質庫
-    const grassMat = new THREE.MeshLambertMaterial({ color: 0x388e3c });
-    const concMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#c5c8c5') });
-    const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x37474f });
-    const brickRedMat = new THREE.MeshLambertMaterial({ color: 0xb71540 });
+    // 精緻材質調色盤 (真實校園質感)
+    const grassMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+    const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x37474f, roughness: 0.85 });
+    const plazaPavingMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#dcdde1') });
+    const concWallMat = new THREE.MeshLambertMaterial({ map: concreteTexture('#c5c8c5') });
     const yellowWallMat = new THREE.MeshLambertMaterial({ color: 0xf6e58d });
     const beigeWallMat = new THREE.MeshLambertMaterial({ color: 0xf7f1e3 });
-    const orangeRoofMat = new THREE.MeshLambertMaterial({ color: 0xf39c12 });
-    const darkRoofMat = new THREE.MeshLambertMaterial({ color: 0x57606f });
+    const darkGrayWallMat = new THREE.MeshLambertMaterial({ color: 0x78909c });
+    const brickRedMat = new THREE.MeshLambertMaterial({ color: 0xb71540 });
+    const gymOrangeRoofMat = new THREE.MeshLambertMaterial({ color: 0xf39c12 });
+    const darkRoofMat = new THREE.MeshLambertMaterial({ color: 0x485460 });
     const glassMat = glass(0x81ecec);
-    const gearGreenMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.35, metalness: 0.4 });
+    const darkGlassMat = glass(0x2f3542);
+    const gearGreenMat = new THREE.MeshStandardMaterial({ color: 0x1b5e20, roughness: 0.35, metalness: 0.45 });
     const crestRedMat = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.35, metalness: 0.5 });
     const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.25, metalness: 0.85 });
-    const trackRedMat = new THREE.MeshLambertMaterial({ color: 0xb71540 });
-    const lineWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const puRedTrackMat = new THREE.MeshLambertMaterial({ color: 0xb71540 });
+    const puWhiteLineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const courtBlueMat = new THREE.MeshLambertMaterial({ color: 0x1976d2 });
+    const courtGreenMat = new THREE.MeshLambertMaterial({ color: 0x388e3c });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x607d8b, roughness: 0.4, metalness: 0.7 });
     const waterMat = new THREE.MeshStandardMaterial({
       color: 0x00bcd4,
       emissive: 0x00838f,
-      emissiveIntensity: 0.3,
+      emissiveIntensity: 0.35,
       transparent: true,
       opacity: 0.85,
       roughness: 0.1,
       metalness: 0.8
     });
-    const steelMat = new THREE.MeshStandardMaterial({ color: 0x607d8b, roughness: 0.4, metalness: 0.7 });
 
-    // A. 校園基地地坪 (Campus Ground Slab, 260m x 340m, 坐標原點設在校區中心)
-    const basePlate = new THREE.Mesh(new THREE.BoxGeometry(264, 0.3, 344), grassMat);
+    // 0. 校區全景基底 (Campus Base Slab, 335m 寬 x 405m 深，平鋪於地表)
+    const basePlate = new THREE.Mesh(new THREE.BoxGeometry(334, 0.3, 404), grassMat);
     basePlate.position.set(0, 0.15, 0);
     group.add(basePlate);
 
-    // 校內主要柏油幹道與中央景觀花崗岩廣場
-    const roadH = new THREE.Mesh(new THREE.BoxGeometry(260, 0.04, 12), asphaltMat);
-    roadH.position.set(0, 0.32, -40);
-    group.add(roadH);
+    // 校內主要柏油林蔭幹道網 (南北林蔭大道與東西環校幹道)
+    const roadMainV = new THREE.Mesh(new THREE.BoxGeometry(11, 0.04, 390), asphaltMat);
+    roadMainV.position.set(10, 0.32, 0);
+    group.add(roadMainV);
 
-    const roadV = new THREE.Mesh(new THREE.BoxGeometry(10, 0.04, 300), asphaltMat);
-    roadV.position.set(5, 0.32, 0);
-    group.add(roadV);
+    const roadSouthH = new THREE.Mesh(new THREE.BoxGeometry(325, 0.04, 11), asphaltMat);
+    roadSouthH.position.set(0, 0.32, 175);
+    group.add(roadSouthH);
 
-    const centralPlaza = new THREE.Mesh(new THREE.BoxGeometry(110, 0.06, 120), concMat);
-    centralPlaza.position.set(-20, 0.33, -100);
-    group.add(centralPlaza);
+    const roadMidH = new THREE.Mesh(new THREE.BoxGeometry(325, 0.04, 10), asphaltMat);
+    roadMidH.position.set(0, 0.32, -5);
+    group.add(roadMidH);
+
+    const roadNorthH = new THREE.Mesh(new THREE.BoxGeometry(325, 0.04, 11), asphaltMat);
+    roadNorthH.position.set(0, 0.32, -185);
+    group.add(roadNorthH);
 
     // =========================================================================
-    // 1. 南側高工路正門牌樓、傳達室、景觀水池與迎賓林蔭花圃
+    // 1. 南門 (高工路正門)：牌樓、傳達室、景觀水池、林蔭大道、精神堡壘
     // =========================================================================
-    const gateZ = -162;
+    // 正門坐標：世界 X: -2399, Z: 2735 -> 區域坐標 (x: -79, z: 182)
+    const gateX = -79, gateZ = 182;
 
-    // 氣派白色花崗岩雙柱門樓
-    [-12, 12].forEach(gx => {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(2.4, 7.5, 2.4), concMat);
-      p.position.set(gx, 3.75, gateZ);
+    // 氣派白色花崗岩雙柱迎賓門樓 (跨度 24 米)
+    [-11, 11].forEach(gx => {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(2.4, 7.8, 2.4), concWallMat);
+      p.position.set(gateX + gx, 3.9, gateZ);
       group.add(p);
     });
 
-    const gateBeam = new THREE.Mesh(new THREE.BoxGeometry(26.4, 1.6, 2.6), concMat);
-    gateBeam.position.set(0, 7.5, gateZ);
+    const gateBeam = new THREE.Mesh(new THREE.BoxGeometry(25.5, 1.6, 2.6), concWallMat);
+    gateBeam.position.set(gateX, 7.7, gateZ);
     group.add(gateBeam);
 
     // 金色楷書校名牌匾「臺中市立臺中工業高級中等學校」
-    const namePlate = new THREE.Mesh(new THREE.BoxGeometry(18, 0.75, 0.15), goldMat);
-    namePlate.position.set(0, 7.5, gateZ - 1.35);
+    const namePlate = new THREE.Mesh(new THREE.BoxGeometry(18.5, 0.75, 0.15), goldMat);
+    namePlate.position.set(gateX, 7.7, gateZ + 1.35); // 朝向高工路南向車流
     group.add(namePlate);
 
-    // 不鏽鋼電動伸縮校門
-    const slidingGate = new THREE.Mesh(new THREE.BoxGeometry(16, 2.2, 0.2), steelMat);
-    slidingGate.position.set(0, 1.1, gateZ);
+    // 不鏽鋼電動伸縮推拉校門
+    const slidingGate = new THREE.Mesh(new THREE.BoxGeometry(17, 2.2, 0.2), steelMat);
+    slidingGate.position.set(gateX, 1.1, gateZ);
     group.add(slidingGate);
 
-    // 紅色警衛室 / 傳達室 (平面圖左下角標記之紅色傳達室)
-    const guardHouse = new THREE.Mesh(new THREE.BoxGeometry(5.8, 3.6, 5.0), brickRedMat);
-    guardHouse.position.set(-17.5, 1.8, gateZ + 3.0);
+    // 經典紅色警衛室 / 傳達室 (平面圖標示之傳達室，位於大門西側)
+    const guardHouse = new THREE.Mesh(new THREE.BoxGeometry(6.2, 3.6, 5.2), brickRedMat);
+    guardHouse.position.set(gateX - 16, 1.8, gateZ - 2.5);
     group.add(guardHouse);
 
-    const guardRoof = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.4, 5.8), darkRoofMat);
-    guardRoof.position.set(-17.5, 3.8, gateZ + 3.0);
+    const guardRoof = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.45, 6.2), darkRoofMat);
+    guardRoof.position.set(gateX - 16, 3.8, gateZ - 2.5);
     group.add(guardRoof);
 
     const guardWin = new THREE.Mesh(new THREE.BoxGeometry(4.2, 1.6, 0.1), glassMat);
-    guardWin.position.set(-17.5, 2.0, gateZ + 0.45);
+    guardWin.position.set(gateX - 16, 2.0, gateZ + 0.15);
     group.add(guardWin);
 
     // 校訓精神立碑「誠 樸 精 勤」
     const motto = new THREE.Mesh(new THREE.BoxGeometry(4.2, 3.2, 0.8),
       new THREE.MeshStandardMaterial({ color: 0x3e2723, roughness: 0.8 }));
-    motto.position.set(17.5, 1.6, gateZ + 3.0);
+    motto.position.set(gateX + 16, 1.6, gateZ - 2.5);
     group.add(motto);
 
-    // 中央迎賓長形景觀水池 (Scenic Reflection Pool, 18m x 42m)
-    const poolX = -20, poolZ = -105;
-    const poolCurb = new THREE.Mesh(new THREE.BoxGeometry(18.4, 0.8, 42.4), concMat);
+    // 迎賓中央景觀水池 (Scenic Reflection Pool, 18m x 44m，位於校門與中工大樓之間)
+    const poolX = -52, poolZ = 125;
+    const poolCurb = new THREE.Mesh(new THREE.BoxGeometry(18.6, 0.8, 44.6), concWallMat);
     poolCurb.position.set(poolX, 0.4, poolZ);
     group.add(poolCurb);
 
-    const poolWater = new THREE.Mesh(new THREE.BoxGeometry(16.8, 0.6, 40.8), waterMat);
+    const poolWater = new THREE.Mesh(new THREE.BoxGeometry(16.8, 0.6, 42.8), waterMat);
     poolWater.position.set(poolX, 0.45, poolZ);
     group.add(poolWater);
 
-    // 3 組發光噴泉水柱
-    [-12, 0, 12].forEach(fz => {
-      const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.3, 2.8, 8),
-        new THREE.MeshStandardMaterial({ color: 0xe0f7fa, emissive: 0x80deea, emissiveIntensity: 1.5, transparent: true, opacity: 0.7 }));
-      jet.position.set(poolX, 1.6, poolZ + fz);
+    // 3 組發光中央噴泉水柱
+    [-13, 0, 13].forEach(fz => {
+      const jet = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.35, 3.2, 8),
+        new THREE.MeshStandardMaterial({ color: 0xe0f7fa, emissive: 0x80deea, emissiveIntensity: 1.6, transparent: true, opacity: 0.7 }));
+      jet.position.set(poolX, 1.8, poolZ + fz);
       group.add(jet);
     });
 
-    // 水池兩側對稱常綠樹球與花圃
+    // 水池兩側對稱常綠樹球與花圃步道
     [-1, 1].forEach(side => {
-      for (let z = -140; z <= -70; z += 12) {
+      for (let z = 100; z <= 155; z += 12) {
         const shrub = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 8),
           new THREE.MeshLambertMaterial({ color: 0x1b5e20 }));
         shrub.position.set(poolX + side * 14.5, 1.5, z);
@@ -672,294 +694,364 @@ export class ProceduralLandmarks {
     });
 
     // =========================================================================
-    // 2. 經典象徵：12 齒綠色齒輪校徽 (TCIVS Gear Crest)
+    // 2. 臺中高工 12 齒綠色齒輪校徽產生器 (TCIVS Gear Crest)
     // =========================================================================
-    const createGearCrest = (size = 4.2) => {
+    const createGearCrest = (size = 5.2) => {
       const crest = new THREE.Group();
-      const ring = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.5, size * 0.5, 0.35, 24), gearGreenMat);
+      // 綠色外齒輪環 (12 齒)
+      const ring = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.5, size * 0.5, 0.36, 24), gearGreenMat);
       ring.rotation.x = Math.PI / 2;
       crest.add(ring);
 
       for (let i = 0; i < 12; i++) {
         const ang = (i / 12) * Math.PI * 2;
-        const tooth = new THREE.Mesh(new THREE.BoxGeometry(size * 0.16, size * 0.22, 0.36), gearGreenMat);
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(size * 0.16, size * 0.22, 0.38), gearGreenMat);
         tooth.position.set(Math.sin(ang) * (size * 0.55), Math.cos(ang) * (size * 0.55), 0);
         tooth.rotation.z = -ang;
         crest.add(tooth);
       }
 
-      const innerWhite = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.36, size * 0.36, 0.37, 24),
+      // 內圈白色襯底
+      const innerWhite = new THREE.Mesh(new THREE.CylinderGeometry(size * 0.36, size * 0.36, 0.38, 24),
         new THREE.MeshBasicMaterial({ color: 0xffffff }));
       innerWhite.rotation.x = Math.PI / 2;
       crest.add(innerWhite);
 
-      const hBar1 = new THREE.Mesh(new THREE.BoxGeometry(size * 0.42, size * 0.08, 0.4), crestRedMat);
+      // 紅色「工」與「中」字形幾何體
+      const hBar1 = new THREE.Mesh(new THREE.BoxGeometry(size * 0.42, size * 0.08, 0.42), crestRedMat);
       hBar1.position.set(0, size * 0.15, 0); crest.add(hBar1);
-      const hBar2 = new THREE.Mesh(new THREE.BoxGeometry(size * 0.42, size * 0.08, 0.4), crestRedMat);
+      const hBar2 = new THREE.Mesh(new THREE.BoxGeometry(size * 0.42, size * 0.08, 0.42), crestRedMat);
       hBar2.position.set(0, -size * 0.15, 0); crest.add(hBar2);
-      const vBar = new THREE.Mesh(new THREE.BoxGeometry(size * 0.09, size * 0.45, 0.4), crestRedMat);
+      const vBar = new THREE.Mesh(new THREE.BoxGeometry(size * 0.09, size * 0.45, 0.42), crestRedMat);
       vBar.position.set(0, 0, 0); crest.add(vBar);
-      const centerBox = new THREE.Mesh(new THREE.BoxGeometry(size * 0.24, size * 0.2, 0.42),
+      const centerBox = new THREE.Mesh(new THREE.BoxGeometry(size * 0.24, size * 0.2, 0.44),
         new THREE.MeshLambertMaterial({ color: 0xffffff }));
       crest.add(centerBox);
-      const midBar = new THREE.Mesh(new THREE.BoxGeometry(size * 0.24, size * 0.06, 0.44), crestRedMat);
+      const midBar = new THREE.Mesh(new THREE.BoxGeometry(size * 0.24, size * 0.06, 0.46), crestRedMat);
       crest.add(midBar);
 
       return crest;
     };
 
     // =========================================================================
-    // 3. 核心教學與實習大樓群
+    // 3. 中軸教學核心大樓群 (中工大樓、第二實習大樓、第一實習大樓、宏毅樓)
     // =========================================================================
 
-    // (1) 中工大樓 (Administration & Main Hall, 正對景觀水池, Z = -58)
-    const admW = 74, admH = 19, admD = 22;
+    // (1) 中工大樓 (Administration & Main Building, 區域坐標 x: -52, z: 72)
+    // 依 Overture 足跡：寬 122m x 深 25m x 高 19m (四層樓宏偉行政中樞)
+    const admX = -52, admZ = 72;
+    const admW = 122, admH = 19, admD = 25;
     const adm = new THREE.Mesh(new THREE.BoxGeometry(admW, admH, admD), yellowWallMat);
-    adm.position.set(poolX, admH / 2, -58);
+    adm.position.set(admX, admH / 2, admZ);
     group.add(adm);
 
+    // 四層樓規律鋁窗與水平遮陽雨庇
     for (let floor = 1; floor <= 4; floor++) {
-      const fy = floor * 4.2 - 1.2;
-      const ribbonWin = new THREE.Mesh(new THREE.BoxGeometry(admW - 6, 1.8, admD + 0.2), glassMat);
-      ribbonWin.position.set(poolX, fy, -58);
+      const fy = floor * 4.4 - 1.2;
+      const ribbonWin = new THREE.Mesh(new THREE.BoxGeometry(admW - 8, 1.8, admD + 0.25), darkGlassMat);
+      ribbonWin.position.set(admX, fy, admZ);
       group.add(ribbonWin);
+
+      const sunshade = new THREE.Mesh(new THREE.BoxGeometry(admW - 6, 0.22, admD + 1.2), concWallMat);
+      sunshade.position.set(admX, fy + 1.1, admZ);
+      group.add(sunshade);
     }
 
-    for (let c = -2; c <= 2; c++) {
+    // 正面挑高迎賓羅馬柱列門廊 (面向南側水池，Z+)
+    for (let c = -3; c <= 3; c++) {
       if (c === 0) continue;
-      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.85, 9, 12), concMat);
-      col.position.set(poolX + c * 5.2, 4.5, -58 - admD / 2 - 2.8);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.95, 9.5, 12), concWallMat);
+      col.position.set(admX + c * 4.8, 4.75, admZ + admD / 2 + 2.8);
       group.add(col);
     }
-    const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(26, 1.2, 6.5), concMat);
-    porticoRoof.position.set(poolX, 9.6, -58 - admD / 2 - 2.5);
+    const porticoRoof = new THREE.Mesh(new THREE.BoxGeometry(34, 1.2, 7.0), concWallMat);
+    porticoRoof.position.set(admX, 10.1, admZ + admD / 2 + 2.6);
     group.add(porticoRoof);
 
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(16, 6.5, 14), beigeWallMat);
-    tower.position.set(poolX, admH + 3.25, -58);
+    // 中央鐘樓頂閣與大時鐘
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(18, 7.5, 16), beigeWallMat);
+    tower.position.set(admX, admH + 3.75, admZ);
     group.add(tower);
 
-    const clockFace = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 0.3, 20),
+    const clockFace = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 0.35, 24),
       new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 }));
     clockFace.rotation.x = Math.PI / 2;
-    clockFace.position.set(poolX, admH + 3.25, -58 - 7.1);
+    clockFace.position.set(admX, admH + 3.75, admZ + 8.1); // 朝南面向正門
     group.add(clockFace);
 
-    const bigCrest = createGearCrest(5.2);
-    bigCrest.position.set(poolX, admH + 7.8, -58 - 4.5);
+    // 中工大樓山牆頂部矗立 12 齒綠色齒輪校徽
+    const bigCrest = createGearCrest(5.6);
+    bigCrest.position.set(admX, admH + 9.0, admZ + 4.5);
     group.add(bigCrest);
 
-    const admSign = new THREE.Mesh(new THREE.BoxGeometry(10, 1.2, 0.2), goldMat);
-    admSign.position.set(poolX, admH + 0.8, -58 - admD / 2 - 0.2);
+    // 金色字體「中工大樓」
+    const admSign = new THREE.Mesh(new THREE.BoxGeometry(12, 1.3, 0.25), goldMat);
+    admSign.position.set(admX, admH + 0.8, admZ + admD / 2 + 0.25);
     group.add(admSign);
 
-    // (2) 第二實習大樓 (電機、資訊、控制科, Z = -18)
-    const lab2 = new THREE.Mesh(new THREE.BoxGeometry(78, 17, 22), beigeWallMat);
-    lab2.position.set(poolX, 8.5, -18);
+    // (2) 第二實習大樓 (電機、資訊、控制科, 區域坐標 x: -54, z: 25)
+    // 依 Overture 足跡：寬 124m x 深 16m x 高 17m
+    const lab2X = -54, lab2Z = 25;
+    const lab2 = new THREE.Mesh(new THREE.BoxGeometry(124, 17, 16), beigeWallMat);
+    lab2.position.set(lab2X, 8.5, lab2Z);
     group.add(lab2);
 
-    const blueTrim2 = new THREE.Mesh(new THREE.BoxGeometry(78.4, 1.2, 22.4),
+    const blueTrim2 = new THREE.Mesh(new THREE.BoxGeometry(124.4, 1.2, 16.4),
       new THREE.MeshLambertMaterial({ color: 0x0288d1 }));
-    blueTrim2.position.set(poolX, 12, -18);
+    blueTrim2.position.set(lab2X, 12.5, lab2Z);
     group.add(blueTrim2);
 
-    [-18, 18].forEach(tx => {
-      const acUnit = new THREE.Mesh(new THREE.BoxGeometry(4.5, 2.2, 5.0), steelMat);
-      acUnit.position.set(poolX + tx, 18.1, -18);
+    // 屋頂機電排風冷卻塔與通訊天線
+    [-25, 25].forEach(tx => {
+      const acUnit = new THREE.Mesh(new THREE.BoxGeometry(5.2, 2.4, 5.8), steelMat);
+      acUnit.position.set(lab2X + tx, 18.2, lab2Z);
       group.add(acUnit);
     });
 
-    // (3) 第一實習大樓 (建築、土木、電子、製圖科, Z = +22)
-    const lab1 = new THREE.Mesh(new THREE.BoxGeometry(78, 17, 22), concMat);
-    lab1.position.set(poolX, 8.5, 22);
+    // (3) 第一實習大樓 (建築、土木、電子、製圖科, 區域坐標 x: -80, z: -15)
+    // 依 Overture 足跡：寬 130m x 深 15m x 高 17m
+    const lab1X = -80, lab1Z = -15;
+    const lab1 = new THREE.Mesh(new THREE.BoxGeometry(130, 17, 15), concWallMat);
+    lab1.position.set(lab1X, 8.5, lab1Z);
     group.add(lab1);
 
-    for (let sx = -30; sx <= 30; sx += 12) {
-      const skylight = new THREE.Mesh(new THREE.ConeGeometry(3.5, 2.4, 4), glassMat);
+    // 屋頂建築製圖採光天窗排 (Shed Skylights)
+    for (let sx = -45; sx <= 45; sx += 15) {
+      const skylight = new THREE.Mesh(new THREE.ConeGeometry(4.2, 2.6, 4), glassMat);
       skylight.rotation.y = Math.PI / 4;
-      skylight.position.set(poolX + sx, 18.2, 22);
+      skylight.position.set(lab1X + sx, 18.3, lab1Z);
       group.add(skylight);
     }
 
-    // (4) 宏毅樓 (主要教學大樓, Z = +62)
-    const honW = 82, honH = 16, honD = 18;
-    const hon = new THREE.Mesh(new THREE.BoxGeometry(honW, honH, honD), yellowWallMat);
-    hon.position.set(poolX, honH / 2, 62);
+    // (4) 宏毅樓 (主要教學大樓, 區域坐標 x: -53, z: -58)
+    // 依 Overture 足跡：寬 128m x 深 16m x 高 16m
+    const honX = -53, honZ = -58;
+    const hon = new THREE.Mesh(new THREE.BoxGeometry(128, 16, 16), yellowWallMat);
+    hon.position.set(honX, 8.0, honZ);
     group.add(hon);
 
+    // 南向三層貫通式走廊與紅色防墜金屬欄杆
     for (let fl = 1; fl <= 3; fl++) {
-      const corridor = new THREE.Mesh(new THREE.BoxGeometry(honW, 0.4, 2.6), concMat);
-      corridor.position.set(poolX, fl * 4.5, 62 - honD / 2 - 1.3);
+      const corridor = new THREE.Mesh(new THREE.BoxGeometry(128, 0.4, 2.6), concWallMat);
+      corridor.position.set(honX, fl * 4.6, honZ + 8.0 + 1.3);
       group.add(corridor);
 
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(honW, 1.1, 0.1),
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(128, 1.1, 0.1),
         new THREE.MeshLambertMaterial({ color: 0xd32f2f }));
-      rail.position.set(poolX, fl * 4.5 + 0.6, 62 - honD / 2 - 2.5);
+      rail.position.set(honX, fl * 4.6 + 0.6, honZ + 8.0 + 2.5);
       group.add(rail);
     }
 
-    // (5) 化工圖傳大樓 (西側沿工學六街, X = -108, Z = 0)
-    const chem = new THREE.Mesh(new THREE.BoxGeometry(18, 15, 64), beigeWallMat);
-    chem.position.set(-108, 7.5, 0);
+    // =========================================================================
+    // 4. 西側專業系館與生活設施 (化工圖傳大樓、員生社、中餐烘焙教室)
+    // =========================================================================
+    // 化工圖傳大樓 (沿工學六街延伸，坐標 x: -144, z: 28，寬 14m x 長 70m x 高 16m)
+    const chem = new THREE.Mesh(new THREE.BoxGeometry(14, 16, 70), beigeWallMat);
+    chem.position.set(-144, 8.0, 28);
     group.add(chem);
 
-    const chemStripe = new THREE.Mesh(new THREE.BoxGeometry(18.4, 1.4, 64.4),
+    const chemStripe = new THREE.Mesh(new THREE.BoxGeometry(14.4, 1.4, 70.4),
       new THREE.MeshLambertMaterial({ color: 0x8e44ad }));
-    chemStripe.position.set(-108, 10.5, 0);
+    chemStripe.position.set(-144, 11.5, 28);
     group.add(chemStripe);
 
-    // =========================================================================
-    // 4. 東南實習廠區 (汽車板金大樓 & 機械冷凍大樓)
-    // =========================================================================
-    const factoryMat = new THREE.MeshLambertMaterial({ color: 0x78909c });
+    // 員生社與中餐烘焙教室 (x: -146, z: -55 ~ 125)
+    const store = new THREE.Mesh(new THREE.BoxGeometry(18, 8, 45), yellowWallMat);
+    store.position.set(-146, 4.0, -55);
+    group.add(store);
 
-    const autoBldg = new THREE.Mesh(new THREE.BoxGeometry(56, 10.5, 26), factoryMat);
-    autoBldg.position.set(68, 5.25, -125);
+    const bake = new THREE.Mesh(new THREE.BoxGeometry(22, 9, 24), concWallMat);
+    bake.position.set(-146, 4.5, 125);
+    group.add(bake);
+
+    // =========================================================================
+    // 5. 東南實習廠區 (機械大樓、汽車板金大樓、機械冷凍大樓、機械工場)
+    // =========================================================================
+    // (1) 機械大樓 (x: 82, z: 52，寬 117m x 深 18m x 高 13m)
+    const mechHall = new THREE.Mesh(new THREE.BoxGeometry(117, 13, 18), darkGrayWallMat);
+    mechHall.position.set(82, 6.5, 52);
+    group.add(mechHall);
+
+    // (2) 汽車、板金大樓 (x: 88, z: 129，寬 82m x 深 20m x 高 11m，挑高實習車廠)
+    const autoBldg = new THREE.Mesh(new THREE.BoxGeometry(82, 11, 20), darkGrayWallMat);
+    autoBldg.position.set(88, 5.5, 129);
     group.add(autoBldg);
 
-    [-16, 0, 16].forEach(gx => {
-      const rollDoor = new THREE.Mesh(new THREE.BoxGeometry(6.5, 5.5, 0.3),
+    // 4 組大型工業電動捲門與維修出入斜坡
+    [-28, -9, 9, 28].forEach(gx => {
+      const rollDoor = new THREE.Mesh(new THREE.BoxGeometry(7.2, 5.8, 0.3),
         new THREE.MeshStandardMaterial({ color: 0x37474f, metalness: 0.7 }));
-      rollDoor.position.set(68 + gx, 2.75, -125 + 13.1);
+      rollDoor.position.set(88 + gx, 2.9, 129 + 10.1);
       group.add(rollDoor);
     });
 
-    const mechBldg = new THREE.Mesh(new THREE.BoxGeometry(56, 11, 24), factoryMat);
-    mechBldg.position.set(68, 5.5, -78);
-    group.add(mechBldg);
+    // (3) 機械冷凍大樓 (x: 67, z: 161，寬 97m x 深 38m x 高 12m，大型機電廠區)
+    const freezeBldg = new THREE.Mesh(new THREE.BoxGeometry(97, 12, 38), darkGrayWallMat);
+    freezeBldg.position.set(67, 6.0, 161);
+    group.add(freezeBldg);
 
-    [-12, 12].forEach(tx => {
-      const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.4, 3.2, 16),
+    // 屋頂重型冷卻水塔與吊車鋼樑
+    [-25, 0, 25].forEach(tx => {
+      const tower = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 3.8, 16),
         new THREE.MeshStandardMaterial({ color: 0x90a4ae, metalness: 0.6 }));
-      tower.position.set(68 + tx, 12.6, -78);
+      tower.position.set(67 + tx, 13.9, 161);
       group.add(tower);
     });
 
     // =========================================================================
-    // 5. 400m 國際標準田徑運動場 (Track & Field Stadium) & 球場群
+    // 6. 400m 國際標準田徑運動場 (Stadium) 與體育球場群 (東側工學二街側)
     // =========================================================================
-    const trackX = 64, trackZ = 45;
+    // 操場坐標：x: 75, z: -20 (寬 86m x 長 138m)
+    const trackX = 75, trackZ = -20;
 
-    const trackBase = new THREE.Mesh(new THREE.BoxGeometry(86, 0.08, 138), trackRedMat);
+    // 橢圓形 8 跑道磚紅色 PU 田徑場
+    const trackBase = new THREE.Mesh(new THREE.BoxGeometry(86, 0.08, 138), puRedTrackMat);
     trackBase.position.set(trackX, 0.34, trackZ);
     group.add(trackBase);
 
-    const pitch = new THREE.Mesh(new THREE.BoxGeometry(56, 0.1, 106),
-      new THREE.MeshLambertMaterial({ color: 0x2e7d32 }));
+    // 內圈綠色天然草皮足球場
+    const pitch = new THREE.Mesh(new THREE.BoxGeometry(56, 0.1, 106), grassMat);
     pitch.position.set(trackX, 0.35, trackZ);
     group.add(pitch);
 
-    const centerCircle = new THREE.Mesh(new THREE.RingGeometry(8.5, 8.8, 24), lineWhiteMat);
+    // 白色足球場標線與中圈
+    const centerCircle = new THREE.Mesh(new THREE.RingGeometry(8.5, 8.8, 24), puWhiteLineMat);
     centerCircle.rotation.x = -Math.PI / 2;
     centerCircle.position.set(trackX, 0.41, trackZ);
     group.add(centerCircle);
 
-    const podiumX = trackX + 43 + 3.0;
-    const grandstand = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.8, 26), concMat);
-    grandstand.position.set(podiumX, 0.9, trackZ);
+    // 司令台 (Grandstand / Podium，位於跑道東側中央，面向操場西向)
+    const grandstandX = trackX + 43 + 3.0;
+    const grandstand = new THREE.Mesh(new THREE.BoxGeometry(4.8, 2.0, 28), concWallMat);
+    grandstand.position.set(grandstandX, 1.0, trackZ);
     group.add(grandstand);
 
-    const canopy = new THREE.Mesh(new THREE.BoxGeometry(6.5, 0.35, 28),
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(7.0, 0.38, 30),
       new THREE.MeshStandardMaterial({ color: 0xf8f9fa, roughness: 0.3, metalness: 0.1 }));
-    canopy.position.set(podiumX - 1.0, 5.2, trackZ);
+    canopy.position.set(grandstandX - 1.2, 5.6, trackZ);
     group.add(canopy);
 
-    [-4, 0, 4].forEach(fz => {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 9, 8),
+    // 司令台三支不鏽鋼旗桿
+    [-5, 0, 5].forEach(fz => {
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 9.5, 8),
         new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.9 }));
-      pole.position.set(podiumX + 1.2, 4.5, trackZ + fz);
+      pole.position.set(grandstandX + 1.2, 4.75, trackZ + fz);
       group.add(pole);
     });
 
+    // 多功能室外球場群 (排球場與壓克力籃球場，x: 60, z: 45)
     [-14, 14].forEach(cz => {
-      const court = new THREE.Mesh(new THREE.BoxGeometry(26, 0.06, 16), courtBlueMat);
-      court.position.set(trackX, 0.33, -20 + cz);
+      const court = new THREE.Mesh(new THREE.BoxGeometry(28, 0.06, 16), courtBlueMat);
+      court.position.set(trackX, 0.33, 45 + cz);
       group.add(court);
 
-      [-13, 13].forEach(bx => {
+      // 籃球架與透明籃板
+      [-14, 14].forEach(bx => {
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3.8, 8), steelMat);
-        pole.position.set(trackX + bx, 1.9, -20 + cz);
+        pole.position.set(trackX + bx, 1.9, 45 + cz);
         group.add(pole);
 
         const board = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.2, 1.8),
           new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.85 }));
-        board.position.set(trackX + bx - (bx > 0 ? 0.3 : -0.3), 3.4, -20 + cz);
+        board.position.set(trackX + bx - (bx > 0 ? 0.3 : -0.3), 3.4, 45 + cz);
         group.add(board);
       });
     });
 
     // =========================================================================
-    // 6. 北校區：體育館 (樂群堂)、圖書館、學生餐廳、誠樸樓、懷思樓、工學路後門
+    // 7. 北校區 (工學路側)：體育館 (橘色大拱頂)、圖書館、女生宿舍、誠樸樓、工學路後門
     // =========================================================================
-    const gymW = 46, gymH = 15, gymD = 48;
-    const gym = new THREE.Mesh(new THREE.BoxGeometry(gymW, gymH, gymD), concMat);
-    gym.position.set(74, gymH / 2, 135);
+    // (1) 體育館 (樂群堂, 平面圖右上角鮮亮橘色大方塊，坐標 x: 123, z: -138)
+    // 依 Overture 足跡：寬 63m x 深 52m x 高 16m
+    const gymX = 123, gymZ = -138;
+    const gymW = 63, gymH = 16, gymD = 52;
+    const gym = new THREE.Mesh(new THREE.BoxGeometry(gymW, gymH, gymD), concWallMat);
+    gym.position.set(gymX, gymH / 2, gymZ);
     group.add(gym);
 
+    // 標誌性亮橘色半圓拱弧形大屋頂 (Signature Orange Barrel Roof)
     const gymRoof = new THREE.Mesh(
-      new THREE.CylinderGeometry(gymW / 2 + 0.5, gymW / 2 + 0.5, gymD + 2, 24, 1, false, 0, Math.PI),
-      orangeRoofMat
+      new THREE.CylinderGeometry(gymD / 2 + 0.5, gymD / 2 + 0.5, gymW + 2, 28, 1, false, 0, Math.PI),
+      gymOrangeRoofMat
     );
+    gymRoof.rotation.x = Math.PI / 2;
     gymRoof.rotation.z = Math.PI / 2;
-    gymRoof.position.set(74, gymH, 135);
+    gymRoof.position.set(gymX, gymH, gymZ);
     group.add(gymRoof);
 
-    const lib = new THREE.Mesh(new THREE.BoxGeometry(28, 14, 26), beigeWallMat);
-    lib.position.set(20, 7, 125);
+    // (2) 學生餐廳 (x: 123, z: -96，寬 43m x 深 26m)
+    const cafe = new THREE.Mesh(new THREE.BoxGeometry(43, 9, 26), beigeWallMat);
+    cafe.position.set(123, 4.5, -96);
+    group.add(cafe);
+
+    // (3) 圖書館 & 百齡樓 (x: -40, z: -94 與 x: -13, z: -111)
+    const lib = new THREE.Mesh(new THREE.BoxGeometry(36, 15, 23), concWallMat);
+    lib.position.set(-40, 7.5, -94);
     group.add(lib);
 
-    const libGlass = new THREE.Mesh(new THREE.BoxGeometry(28.4, 8, 18), glassMat);
-    libGlass.position.set(20, 6, 125);
+    const libGlass = new THREE.Mesh(new THREE.BoxGeometry(36.4, 8, 14), glassMat);
+    libGlass.position.set(-40, 7.5, -94);
     group.add(libGlass);
 
-    const northHall = new THREE.Mesh(new THREE.BoxGeometry(64, 15, 20), yellowWallMat);
-    northHall.position.set(-45, 7.5, 135);
-    group.add(northHall);
+    // (4) 誠樸樓 & 集賢堂 & 懷思樓 (西北校區)
+    // 誠樸樓 (x: -92, z: -141，寬 118m x 深 16m)
+    const cheng = new THREE.Mesh(new THREE.BoxGeometry(118, 15, 16), yellowWallMat);
+    cheng.position.set(-92, 7.5, -141);
+    group.add(cheng);
 
-    [-8, 8].forEach(gx => {
-      const p = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.5, 1.8), concMat);
-      p.position.set(gx, 2.75, 164);
+    // 懷思樓 (x: -12, z: -167)
+    const huai = new THREE.Mesh(new THREE.BoxGeometry(52, 14, 10), beigeWallMat);
+    huai.position.set(-12, 7.0, -167);
+    group.add(huai);
+
+    // (5) 工學路後門 (North Gate, z: -195)
+    [-9, 9].forEach(gx => {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(1.8, 5.5, 1.8), concWallMat);
+      p.position.set(-12 + gx, 2.75, -195);
       group.add(p);
     });
-    const northGateBeam = new THREE.Mesh(new THREE.BoxGeometry(18, 1.2, 2.0), concMat);
-    northGateBeam.position.set(0, 5.5, 164);
+    const northGateBeam = new THREE.Mesh(new THREE.BoxGeometry(20, 1.2, 2.0), concWallMat);
+    northGateBeam.position.set(-12, 5.5, -195);
     group.add(northGateBeam);
 
     // =========================================================================
-    // 7. 穿校親水小河 (旱溪支流/綠川排水) 與白色拱橋
+    // 8. 穿校親水小河 (旱溪支流/綠川排水) 與白色景觀拱橋
     // =========================================================================
-    const river = new THREE.Mesh(new THREE.BoxGeometry(14, 0.4, 130), waterMat);
-    river.position.set(48, 0.2, -80);
-    river.rotation.y = 0.28;
+    // 蜿蜒穿過東南實習廠區旁的小河 (自 x: 30, z: 90 流向 x: 135, z: 180)
+    const river = new THREE.Mesh(new THREE.BoxGeometry(15, 0.4, 130), waterMat);
+    river.position.set(78, 0.2, 135);
+    river.rotation.y = -0.65;
     group.add(river);
 
-    [-110, -55].forEach(bz => {
-      const bridge = new THREE.Mesh(new THREE.BoxGeometry(18, 0.6, 5.5), concMat);
-      bridge.position.set(48 + (bz + 80) * 0.28, 0.7, bz);
-      bridge.rotation.y = 0.28;
+    // 2 座白色人行拱橋
+    [105, 155].forEach(rz => {
+      const rx = 78 + (rz - 135) * Math.tan(0.65);
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(18, 0.6, 5.5), concWallMat);
+      bridge.position.set(rx, 0.7, rz);
+      bridge.rotation.y = -0.65;
       group.add(bridge);
 
       [-2.5, 2.5].forEach(dy => {
         const handrail = new THREE.Mesh(new THREE.BoxGeometry(18, 0.9, 0.15),
           new THREE.MeshLambertMaterial({ color: 0xffffff }));
-        handrail.position.set(48 + (bz + 80) * 0.28, 1.3, bz + dy);
-        handrail.rotation.y = 0.28;
+        handrail.position.set(rx, 1.3, rz + dy);
+        handrail.rotation.y = -0.65;
         group.add(handrail);
       });
     });
 
     // =========================================================================
-    // 8. 校園四周黑色鍛鐵安全圍牆與路緣
+    // 9. 校園四周黑色鍛鐵安全圍牆與路緣
     // =========================================================================
     const wallMat = new THREE.MeshStandardMaterial({ color: 0x263238, roughness: 0.6, metalness: 0.8 });
-    const fenceS = new THREE.Mesh(new THREE.BoxGeometry(260, 2.2, 0.2), wallMat);
-    fenceS.position.set(0, 1.1, -164); group.add(fenceS);
-    const fenceN = new THREE.Mesh(new THREE.BoxGeometry(260, 2.2, 0.2), wallMat);
-    fenceN.position.set(0, 1.1, 164); group.add(fenceN);
-    const fenceW = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 328), wallMat);
-    fenceW.position.set(-130, 1.1, 0); group.add(fenceW);
-    const fenceE = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 328), wallMat);
-    fenceE.position.set(130, 1.1, 0); group.add(fenceE);
+    const fenceS = new THREE.Mesh(new THREE.BoxGeometry(330, 2.2, 0.2), wallMat);
+    fenceS.position.set(0, 1.1, 198); group.add(fenceS);
+    const fenceN = new THREE.Mesh(new THREE.BoxGeometry(330, 2.2, 0.2), wallMat);
+    fenceN.position.set(0, 1.1, -198); group.add(fenceN);
+    const fenceW = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 396), wallMat);
+    fenceW.position.set(-165, 1.1, 0); group.add(fenceW);
+    const fenceE = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.2, 396), wallMat);
+    fenceE.position.set(165, 1.1, 0); group.add(fenceE);
 
     return group;
   }

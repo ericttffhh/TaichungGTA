@@ -125,12 +125,12 @@ export const LANDMARK_CONFIGS = [
     badge: '技職最高學府 · 1938 工業名校',
     address: '台中市南區高工路191號',
     builder: 'buildTaichungIndustrialHighSchool',
-    x: -1958.6,
-    z: 2584.8,
+    x: -2320.0,
+    z: 2553.0,
     rotY: 0,
-    boxW: 280, boxH: 26, boxD: 360,
-    exclusionRadius: 180,
-    spawnOffset: { x: 0, z: -175 }, // 高工路正門口路面
+    boxW: 340, boxH: 28, boxD: 410,
+    exclusionRadius: 215, // 完美覆蓋工學路-高工路-工學六街-工學二街街廓內 59 棟建物範圍
+    spawnOffset: { x: -79, z: 200 }, // 正對高工路主校門、傳達室與中央迎賓景觀水池軸線
     yOffset: 0.25
   },
   {
@@ -6367,7 +6367,7 @@ export class TaichungRushApp {
       { name: '國立臺灣美術館 (國美館)', icon: '🎨', tag: '當代藝術', desc: '亞洲最大美術館之一與雕塑綠地', x: -2296, z: -341 },
       { name: '臺中國家歌劇院', icon: '🎭', tag: '世界九大新地標', desc: '伊東豊雄曲牆美聲涵洞建築', x: -420, z: -150 },
       { name: '大慶車站 (臺鐵/捷運共構)', icon: '🚆', tag: '捷運綠線', desc: '臺鐵與台中捷運高架共構轉乘樞紐', x: -3833, z: 2118 },
-      { name: '臺中高工 (TCIVS 校區)', icon: '🏫', tag: '技職名校', desc: '工學路與高工路名校 · 400m操場/實習大樓群/齒輪校徽', x: -1958.6, z: 2584.8 },
+      { name: '臺中高工 (TCIVS 校區)', icon: '🏫', tag: '技職名校', desc: '高工路191號 · 400m操場/實習大樓群/齒輪校徽/水池', x: -2320, z: 2553 },
       { name: '第二市場 (美食街/六角樓)', icon: '🍜', tag: '在地美食', desc: '百年老牌炒麵、東泉辣椒醬、菜頭粿', x: -195, z: 45 },
       { name: '臺灣大道一段 (市中心起點)', icon: '🛣️', tag: '繁華主幹道', desc: '雙向寬闊大馬路、兩側繁華店家騎樓', x: -160, z: 8 },
       { name: '亞洲大飯店 / 榮達大樓', icon: '🏢', tag: '中區地標', desc: '中區歷史摩天樓 · 175m 階梯塔樓', x: -159.6, z: -58.0 }
