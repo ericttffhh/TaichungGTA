@@ -119,128 +119,371 @@ class LandmarkTextureHelper {
     tex.repeat.set(3, 4);
     return tex;
   }
+
+  // D. 1917 六角鐘樓復古羅馬數字時鐘貼圖
+  static createClockTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#fefae0';
+    ctx.beginPath();
+    ctx.arc(128, 128, 120, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = '#2b1d0c';
+    ctx.lineWidth = 10;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(128, 128, 112, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#1b1b1b';
+    ctx.font = 'bold 24px "Times New Roman", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const numerals = ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+    for (let i = 0; i < 12; i++) {
+      const ang = (i * Math.PI) / 6;
+      const x = 128 + Math.sin(ang) * 88;
+      const y = 128 - Math.cos(ang) * 88;
+      ctx.fillText(numerals[i], x, y);
+    }
+
+    // 指針 (10點10分優雅時鐘角度)
+    ctx.strokeStyle = '#1b1b1b';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(128, 128);
+    ctx.lineTo(82, 78); // 時針
+    ctx.stroke();
+
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(128, 128);
+    ctx.lineTo(182, 72); // 分針
+    ctx.stroke();
+
+    ctx.fillStyle = '#b33939';
+    ctx.beginPath();
+    ctx.arc(128, 128, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  // E. 傳統市場百年老字號招牌貼圖
+  static createMarketStallTexture(name, sub) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#8b261e';
+    ctx.fillRect(0, 0, 256, 128);
+    ctx.fillStyle = '#fff8e7';
+    ctx.fillRect(6, 6, 244, 116);
+    ctx.strokeStyle = '#c5a059';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(10, 10, 236, 108);
+
+    ctx.fillStyle = '#4a1511';
+    ctx.font = 'bold 30px "Noto Serif TC", serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 128, 48);
+
+    ctx.font = 'bold 15px "Noto Sans TC", sans-serif';
+    ctx.fillStyle = '#8b261e';
+    ctx.fillText(sub, 128, 88);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
 }
 
 export class LandmarkBuilder {
   /**
    * 1. 台中公園 湖心亭 (Huxin Pavilion)
-   * 雙尖頂雙重簷歇山木造涼亭、日月湖景致、紅木拱橋與石造基座
+   * 雙尖頂雙重簷歇山木造涼亭、日月湖景致、紅木拱橋、湖畔遊船與日式石燈籠
    */
   static buildTaichungParkPavilion() {
     const group = new THREE.Group();
     group.name = 'taichung_park_huxin_pavilion';
 
+    const roofTileTex = LandmarkTextureHelper.createTealRoofTileTexture();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2311, roughness: 0.75 });
+    const lightWoodMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.7 });
+    const redWoodMat = new THREE.MeshStandardMaterial({ color: 0xad281e, roughness: 0.65 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.85, roughness: 0.2 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x838c91, roughness: 0.85 });
+    const stoneLanternMat = new THREE.MeshStandardMaterial({ color: 0xa4b0be, roughness: 0.9 });
+    const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf5f6fa });
+    const roofMat = new THREE.MeshStandardMaterial({ map: roofTileTex, roughness: 0.45, side: THREE.DoubleSide });
+    const darkTileMat = new THREE.MeshStandardMaterial({ color: 0x1a2e26, roughness: 0.6 });
+
     // A. 日月湖水面基底 (半徑 38 米圓形碧綠湖水)
-    const lakeGeom = new THREE.CylinderGeometry(38, 38, 1.2, 32);
+    const lakeGeom = new THREE.CylinderGeometry(38, 38, 1.2, 48);
     const lakeMat = new THREE.MeshStandardMaterial({
       color: 0x16a085,
       roughness: 0.1,
-      metalness: 0.3,
+      metalness: 0.4,
       transparent: true,
-      opacity: 0.82
+      opacity: 0.84
     });
     const lake = new THREE.Mesh(lakeGeom, lakeMat);
     lake.position.y = 0.6;
+    lake.receiveShadow = true;
     group.add(lake);
 
     // 湖岸圓形石駁坎
-    const rimGeom = new THREE.RingGeometry(37.5, 40.5, 36);
+    const rimGeom = new THREE.RingGeometry(37.5, 41.0, 48);
     rimGeom.rotateX(-Math.PI / 2);
-    const rimMat = new THREE.MeshLambertMaterial({ color: 0x7f8c8d });
-    const rim = new THREE.Mesh(rimGeom, rimMat);
+    const rim = new THREE.Mesh(rimGeom, stoneMat);
     rim.position.y = 1.22;
     group.add(rim);
 
-    // B. 湖中島台 (涼亭基座石台，圓角方形)
-    const baseGeom = new THREE.BoxGeometry(22, 1.8, 16);
-    const baseMat = new THREE.MeshLambertMaterial({ color: 0x95a5a6 });
-    const baseMesh = new THREE.Mesh(baseGeom, baseMat);
+    // B. 湖中島台 (涼亭基座石台，圓角八角形基座)
+    const baseGeom = new THREE.CylinderGeometry(14.5, 15.2, 1.8, 8);
+    const baseMesh = new THREE.Mesh(baseGeom, stoneMat);
     baseMesh.position.set(0, 1.6, 0);
+    baseMesh.receiveShadow = true;
     group.add(baseMesh);
 
-    // C. 湖心亭架高木地板與紅色欄杆
-    const deckGeom = new THREE.BoxGeometry(20, 0.4, 14);
-    const deckMat = new THREE.MeshLambertMaterial({ color: 0xa0522d });
-    const deck = new THREE.Mesh(deckGeom, deckMat);
+    // C. 湖心亭架高木地板與紅色雕花欄杆
+    const deckGeom = new THREE.BoxGeometry(20.4, 0.45, 14.4);
+    const deck = new THREE.Mesh(deckGeom, woodMat);
     deck.position.set(0, 2.7, 0);
+    deck.receiveShadow = true;
     group.add(deck);
 
-    // 白色與暗紅相間防護欄杆
-    const railMat = new THREE.MeshLambertMaterial({ color: 0xf5f6fa });
-    const railGeom = new THREE.BoxGeometry(19.6, 0.8, 0.2);
-    const railFront = new THREE.Mesh(railGeom, railMat);
-    railFront.position.set(0, 3.2, 6.8);
-    const railBack = new THREE.Mesh(railGeom, railMat);
-    railBack.position.set(0, 3.2, -6.8);
-    group.add(railFront, railBack);
+    // 歇山涼亭周圍欄杆 (紅色立柱與白底橫欄)
+    [-6.9, 6.9].forEach(rz => {
+      const railMesh = new THREE.Mesh(new THREE.BoxGeometry(20.0, 0.85, 0.18), redWoodMat);
+      railMesh.position.set(0, 3.25, rz);
+      group.add(railMesh);
+    });
+    [-9.9, 9.9].forEach(rx => {
+      const railMesh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.85, 14.0), redWoodMat);
+      railMesh.position.set(rx, 3.25, 0);
+      group.add(railMesh);
+    });
 
-    // D. 涼亭 16 根深木色主支柱
-    const colGeom = new THREE.CylinderGeometry(0.24, 0.24, 4.2, 12);
-    const colMat = new THREE.MeshLambertMaterial({ color: 0x4a2311 });
+    // D. 涼亭 16 根深木色主支柱與斗拱承重樑 (Columns & Brackets)
+    const colGeom = new THREE.CylinderGeometry(0.26, 0.28, 4.4, 12);
     const xPositions = [-8.5, -3.0, 3.0, 8.5];
     const zPositions = [-5.5, 0, 5.5];
 
     xPositions.forEach(x => {
       zPositions.forEach(z => {
-        const col = new THREE.Mesh(colGeom, colMat);
-        col.position.set(x, 4.8, z);
+        const col = new THREE.Mesh(colGeom, woodMat);
+        col.position.set(x, 4.9, z);
+        col.castShadow = true;
         group.add(col);
+
+        // 柱頂斗栱構件 (Dou-gong Bracket System)
+        const bracket = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.35, 0.9), woodMat);
+        bracket.position.set(x, 7.2, z);
+        group.add(bracket);
       });
     });
 
-    // E. 經典歇山重簷雙尖頂天棚 (Twin Peaks Oriental Roof)
-    const roofTileTex = LandmarkTextureHelper.createTealRoofTileTexture();
-    const roofMat = new THREE.MeshLambertMaterial({
-      map: roofTileTex,
-      side: THREE.DoubleSide
-    });
-
-    // 左右兩座四角攢尖頂 (雙峰並立)
+    // E. 經典歇山重簷雙尖頂天棚 (Twin Peaks Oriental Roof With Flared Eaves)
     [-5.0, 5.0].forEach(peakX => {
-      // 下層廣簷
-      const lowerGeom = new THREE.ConeGeometry(7.2, 2.4, 4);
+      // 1. 下層廣簷 (Lower Roof)
+      const lowerGeom = new THREE.ConeGeometry(7.6, 2.6, 4);
       lowerGeom.rotateY(Math.PI / 4);
       const lowerRoof = new THREE.Mesh(lowerGeom, roofMat);
-      lowerRoof.position.set(peakX, 7.6, 0);
+      lowerRoof.position.set(peakX, 7.8, 0);
+      lowerRoof.castShadow = true;
       group.add(lowerRoof);
 
-      // 上層尖頂
-      const upperGeom = new THREE.ConeGeometry(5.0, 2.6, 4);
+      // 下層簷口飾邊
+      const lowerEaveRim = new THREE.Mesh(new THREE.BoxGeometry(10.8, 0.22, 10.8), darkTileMat);
+      lowerEaveRim.rotation.y = Math.PI / 4;
+      lowerEaveRim.position.set(peakX, 6.6, 0);
+      group.add(lowerEaveRim);
+
+      // 四角飛簷起翹尖角 (Flared Eave Tips)
+      [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([sx, sz]) => {
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.2, 4), darkTileMat);
+        tip.position.set(peakX + sx * 5.4, 6.9, sz * 5.4);
+        tip.rotation.x = -sz * 0.4;
+        tip.rotation.z = sx * 0.4;
+        group.add(tip);
+      });
+
+      // 2. 上層尖頂 (Upper Roof)
+      const upperGeom = new THREE.ConeGeometry(5.2, 2.8, 4);
       upperGeom.rotateY(Math.PI / 4);
       const upperRoof = new THREE.Mesh(upperGeom, roofMat);
-      upperRoof.position.set(peakX, 9.4, 0);
+      upperRoof.position.set(peakX, 9.6, 0);
+      upperRoof.castShadow = true;
       group.add(upperRoof);
 
       // 頂端金色寶頂 (Finial)
-      const finialGeom = new THREE.SphereGeometry(0.45, 12, 12);
-      const finialMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8, roughness: 0.2 });
-      const finial = new THREE.Mesh(finialGeom, finialMat);
-      finial.position.set(peakX, 11.0, 0);
+      const finialRing = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.12, 8, 16), goldMat);
+      finialRing.rotation.x = Math.PI / 2;
+      finialRing.position.set(peakX, 11.0, 0);
+      group.add(finialRing);
+
+      const finialGeom = new THREE.SphereGeometry(0.52, 12, 12);
+      const finial = new THREE.Mesh(finialGeom, goldMat);
+      finial.position.set(peakX, 11.5, 0);
       group.add(finial);
     });
 
-    // 中央銜接屋脊
-    const ridgeGeom = new THREE.BoxGeometry(6.5, 0.6, 2.2);
-    const ridge = new THREE.Mesh(ridgeGeom, roofMat);
-    ridge.position.set(0, 8.2, 0);
+    // 中央銜接屋脊 (Ridge Connecting the Twin Peaks)
+    const ridgeGeom = new THREE.BoxGeometry(6.6, 0.75, 2.6);
+    const ridge = new THREE.Mesh(ridgeGeom, darkTileMat);
+    ridge.position.set(0, 8.4, 0);
     group.add(ridge);
 
-    // F. 紅木曲橋 (從島台延伸至湖岸)
-    const bridgeGeom = new THREE.BoxGeometry(3.2, 0.4, 18);
-    const bridgeMat = new THREE.MeshLambertMaterial({ color: 0xc0392b });
-    const bridge = new THREE.Mesh(bridgeGeom, bridgeMat);
-    bridge.position.set(0, 2.2, 16);
-    group.add(bridge);
+    // F. 紅木拱形曲橋 (Arched Curved Bridge Leading to Shore)
+    // 實體弧形拱橋 Deck，自 Z: 7.2 跨越至 Z: 26.0 (長 18.8m, 寬 3.4m)
+    const bridgeShape = new THREE.Shape();
+    bridgeShape.moveTo(0, 2.2);
+    bridgeShape.quadraticCurveTo(9.4, 3.4, 18.8, 1.3);
+    bridgeShape.lineTo(18.8, 0.9);
+    bridgeShape.quadraticCurveTo(9.4, 2.9, 0, 1.8);
+    bridgeShape.closePath();
 
-    // 橋墩
-    for (let bz = 10; bz <= 22; bz += 4) {
-      const pierGeom = new THREE.CylinderGeometry(0.2, 0.2, 2.0, 8);
-      const pier1 = new THREE.Mesh(pierGeom, colMat);
-      pier1.position.set(-1.4, 1.2, bz);
-      const pier2 = new THREE.Mesh(pierGeom, colMat);
-      pier2.position.set(1.4, 1.2, bz);
-      group.add(pier1, pier2);
+    const bridgeGeom = new THREE.ExtrudeGeometry(bridgeShape, {
+      depth: 3.4,
+      bevelEnabled: false
+    });
+    bridgeGeom.translate(0, 0, -1.7);
+    bridgeGeom.rotateY(Math.PI / 2);
+
+    const bridgeMesh = new THREE.Mesh(bridgeGeom, redWoodMat);
+    bridgeMesh.position.set(0, 0, 7.2);
+    bridgeMesh.castShadow = true;
+    bridgeMesh.receiveShadow = true;
+    group.add(bridgeMesh);
+
+    // 拱橋兩側紅色護欄柱列
+    for (let bz = 8.5; bz <= 25.0; bz += 2.2) {
+      const normZ = (bz - 7.2) / 18.8;
+      const by = 2.2 + Math.sin(normZ * Math.PI) * 1.2 + 0.45;
+
+      [-1.6, 1.6].forEach(bx => {
+        const baluster = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.08, 0.08, 0.95, 8),
+          redWoodMat
+        );
+        baluster.position.set(bx, by, bz);
+        group.add(baluster);
+
+        // 橋柱頂端朱紅小圓球
+        const postCap = new THREE.Mesh(
+          new THREE.SphereGeometry(0.12, 8, 8),
+          redWoodMat
+        );
+        postCap.position.set(bx, by + 0.5, bz);
+        group.add(postCap);
+      });
     }
+
+    // 橋墩 (深水木柱)
+    for (let bz = 11; bz <= 22; bz += 4.5) {
+      [-1.4, 1.4].forEach(px => {
+        const pier = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.25, 0.25, 2.4, 8),
+          woodMat
+        );
+        pier.position.set(px, 1.2, bz);
+        group.add(pier);
+      });
+    }
+
+    // G. 日月湖水面細節：湖中遊憩小木舟 (Sun Moon Lake Rowboats)
+    const createRowboat = (bx, bz, rotY) => {
+      const boat = new THREE.Group();
+      // 船身 (兩頭尖微翹小木舟)
+      const hullGeom = new THREE.BoxGeometry(1.4, 0.65, 4.2);
+      const hull = new THREE.Mesh(hullGeom, woodMat);
+      hull.position.y = 0.35;
+      boat.add(hull);
+
+      // 船內坐墊板
+      [-0.8, 0.8].forEach(sz => {
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.45), lightWoodMat);
+        seat.position.set(0, 0.5, sz);
+        boat.add(seat);
+      });
+
+      // 雙木槳 (Oars)
+      [-0.75, 0.75].forEach((ox, oIdx) => {
+        const oar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.04, 2.2, 6), lightWoodMat);
+        oar.position.set(ox, 0.65, 0);
+        oar.rotation.z = (oIdx === 0 ? 0.4 : -0.4);
+        oar.rotation.x = 0.2;
+        boat.add(oar);
+      });
+
+      boat.position.set(bx, 0.6, bz);
+      boat.rotation.y = rotY;
+      return boat;
+    };
+
+    const boat1 = createRowboat(-18, -12, 0.4);
+    const boat2 = createRowboat(20, 10, -0.6);
+    group.add(boat1, boat2);
+
+    // H. 湖岸石駁坎日式石燈籠 (Stone Lanterns)
+    [[-10, 16], [10, 16], [-12, -8], [12, -8]].forEach(([lx, lz]) => {
+      const lanternGroup = new THREE.Group();
+      // 基座
+      const lBase = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.3, 0.7), stoneLanternMat);
+      lBase.position.y = 0.15;
+      lanternGroup.add(lBase);
+      // 柱身
+      const lStem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.9, 8), stoneLanternMat);
+      lStem.position.y = 0.75;
+      lanternGroup.add(lStem);
+      // 火袋 (發光燈心)
+      const lBox = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.45, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0xffeaa7, emissive: 0xffc048, emissiveIntensity: 0.6 })
+      );
+      lBox.position.y = 1.35;
+      lanternGroup.add(lBox);
+      // 笠頂 (四角石頂簷)
+      const lCap = new THREE.Mesh(new THREE.ConeGeometry(0.65, 0.35, 4), stoneLanternMat);
+      lCap.rotation.y = Math.PI / 4;
+      lCap.position.y = 1.75;
+      lanternGroup.add(lCap);
+
+      lanternGroup.position.set(lx, 2.5, lz);
+      group.add(lanternGroup);
+    });
+
+    // I. 日月湖睡蓮群 (Water Lily Pads & Lotuses)
+    const lilyMat = new THREE.MeshStandardMaterial({ color: 0x1b4d3e, roughness: 0.4 });
+    const lotusMat = new THREE.MeshStandardMaterial({ color: 0xf368e0, emissive: 0xd980fa, emissiveIntensity: 0.3 });
+
+    [
+      [-14, 18], [-18, 14], [-22, 16],
+      [16, -18], [20, -14], [24, -16]
+    ].forEach(([px, pz]) => {
+      const pad = new THREE.Mesh(new THREE.CircleGeometry(0.85 + Math.random() * 0.4, 12), lilyMat);
+      pad.rotation.x = -Math.PI / 2;
+      pad.position.set(px, 1.21, pz);
+      group.add(pad);
+
+      // 粉紅荷花花朵
+      const flower = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.3, 6), lotusMat);
+      flower.position.set(px, 1.35, pz);
+      group.add(flower);
+    });
 
     return group;
   }
@@ -536,87 +779,284 @@ export class LandmarkBuilder {
 
   /**
    * 5. 臺中第二市場 六角樓 (Taichung Second Market Hexagonal Pavilion)
-   * 1917 百年歷史市場、中央兩層六角木造主樓、三翼放射狀長廊街廓
+   * 1917 百年歷史市場、中央兩層六角木造鐘樓、三翼放射狀長廊街廓與傳統小吃攤商
    */
   static buildSecondMarketHexagonalTower() {
     const group = new THREE.Group();
     group.name = 'second_market_hexagonal_tower';
 
-    // A. 市場中央六角形紅磚基座
-    const baseGeom = new THREE.CylinderGeometry(11, 11, 1.0, 6);
-    const baseMat = new THREE.MeshLambertMaterial({ color: 0x95a5a6 });
+    const brickTex = LandmarkTextureHelper.createRedBrickTexture();
+    const clockTex = LandmarkTextureHelper.createClockTexture();
+    const roofTileTex = LandmarkTextureHelper.createTealRoofTileTexture();
+
+    const baseMat = new THREE.MeshLambertMaterial({ color: 0x8a9299 });
+    const floorMat = new THREE.MeshLambertMaterial({ color: 0x9e8f81 });
+    const brickMat = new THREE.MeshLambertMaterial({ map: brickTex });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x4a2e18, roughness: 0.75, metalness: 0.1 });
+    const lightWoodMat = new THREE.MeshStandardMaterial({ color: 0x7c5232, roughness: 0.7 });
+    const roofTileMat = new THREE.MeshStandardMaterial({ color: 0x852422, roughness: 0.65 });
+    const darkTileMat = new THREE.MeshStandardMaterial({ color: 0x2c3539, roughness: 0.7 });
+    const copperMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.35, metalness: 0.85 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x111e28, roughness: 0.15, metalness: 0.8, transparent: true, opacity: 0.7 });
+    const redLanternMat = new THREE.MeshStandardMaterial({ color: 0xcc1111, emissive: 0x880000, emissiveIntensity: 0.5, roughness: 0.3 });
+
+    // A. 市場中央六角形洗石子厚重基座 (直徑 22m，高 0.5m)
+    const baseGeom = new THREE.CylinderGeometry(11.5, 12.0, 0.5, 6);
     const base = new THREE.Mesh(baseGeom, baseMat);
-    base.position.y = 0.5;
+    base.position.y = 0.25;
+    base.receiveShadow = true;
     group.add(base);
 
-    // B. 一樓六角核心主體 (磚木混合)
-    const brickTex = LandmarkTextureHelper.createRedBrickTexture();
-    const l1Geom = new THREE.CylinderGeometry(9.5, 9.5, 5.8, 6);
-    const l1Mat = new THREE.MeshLambertMaterial({ map: brickTex });
-    const level1 = new THREE.Mesh(l1Geom, l1Mat);
-    level1.position.y = 3.9;
+    // B. 一樓六角核心主體 (1917 經典厚牆紅磚造)
+    const l1Geom = new THREE.CylinderGeometry(9.6, 9.6, 5.8, 6);
+    const level1 = new THREE.Mesh(l1Geom, brickMat);
+    level1.position.y = 3.4;
+    level1.castShadow = true;
+    level1.receiveShadow = true;
     group.add(level1);
 
-    // 一樓與二樓交界之六角腰簷
-    const eaveGeom = new THREE.CylinderGeometry(11.2, 9.5, 0.8, 6);
-    const eaveMat = new THREE.MeshLambertMaterial({ color: 0x2c3e50 });
-    const eave = new THREE.Mesh(eaveGeom, eaveMat);
-    eave.position.y = 7.2;
-    group.add(eave);
-
-    // C. 二樓木造六角展望鐘樓
-    const l2Geom = new THREE.CylinderGeometry(7.5, 7.5, 4.8, 6);
-    const woodMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
-    const level2 = new THREE.Mesh(l2Geom, woodMat);
-    level2.position.y = 10.0;
-    group.add(level2);
-
-    // 二樓木質百葉觀察窗
-    const windowMat = new THREE.MeshLambertMaterial({ color: 0xf1f2f6 });
+    // 一樓核心出入門廊拱圈飾邊 (6 個角柱拱圈)
     for (let r = 0; r < 6; r++) {
       const angle = (r * Math.PI) / 3;
-      const win = new THREE.Mesh(new THREE.BoxGeometry(2.0, 2.5, 0.3), windowMat);
-      win.position.set(Math.sin(angle) * 7.6, 10.4, Math.cos(angle) * 7.6);
-      win.rotation.y = angle;
-      group.add(win);
+      const col = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.45, 5.8, 8), baseMat);
+      col.position.set(Math.sin(angle) * 9.6, 3.4, Math.cos(angle) * 9.6);
+      group.add(col);
+
+      // 磚拱門楣線
+      const archKeystone = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.5, 0.4), baseMat);
+      const midAngle = angle + Math.PI / 6;
+      archKeystone.position.set(Math.sin(midAngle) * 9.7, 5.6, Math.cos(midAngle) * 9.7);
+      archKeystone.rotation.y = midAngle;
+      group.add(archKeystone);
     }
 
-    // D. 頂層六角攢尖頂 (Hexagonal Hip Roof)
-    const roofGeom = new THREE.ConeGeometry(9.6, 4.2, 6);
-    const roofMat = new THREE.MeshLambertMaterial({ color: 0xb71540 });
-    const roof = new THREE.Mesh(roofGeom, roofMat);
-    roof.position.y = 14.5;
-    group.add(roof);
+    // 一樓與二樓交界之六角挑出腰簷 (遮雨腰瓦簷)
+    const eaveGeom = new THREE.CylinderGeometry(11.6, 9.6, 0.75, 6);
+    const eave = new THREE.Mesh(eaveGeom, darkTileMat);
+    eave.position.y = 6.6;
+    group.add(eave);
 
-    // 樓頂避雷避尖與小鐘塔寶頂
-    const spireGeom = new THREE.CylinderGeometry(0.1, 0.35, 2.8, 8);
-    const spireMat = new THREE.MeshStandardMaterial({ color: 0xf39c12, metalness: 0.8 });
-    const spire = new THREE.Mesh(spireGeom, spireMat);
-    spire.position.y = 17.6;
+    // C. 二樓木造六角展望鐘樓 (核心文資焦點)
+    const l2Geom = new THREE.CylinderGeometry(7.6, 7.6, 4.6, 6);
+    const level2 = new THREE.Mesh(l2Geom, woodMat);
+    level2.position.y = 9.25;
+    group.add(level2);
+
+    // 二樓木質百葉觀察窗與 1917 羅馬數字時鐘面 (6 面立面各置大鐘與百葉)
+    const clockMat = new THREE.MeshStandardMaterial({ map: clockTex, roughness: 0.3 });
+    const louverMat = new THREE.MeshLambertMaterial({ color: 0x2d1a0e });
+
+    for (let r = 0; r < 6; r++) {
+      const angle = (r * Math.PI) / 3 + Math.PI / 6;
+      const rad = 7.7;
+      const wx = Math.sin(angle) * rad;
+      const wz = Math.cos(angle) * rad;
+
+      // 1917 復古六角鐘面 (直徑 1.6m 圓盤)
+      const clockFace = new THREE.Mesh(new THREE.CircleGeometry(0.85, 20), clockMat);
+      clockFace.position.set(wx, 10.4, wz);
+      clockFace.rotation.y = angle;
+      group.add(clockFace);
+
+      // 鐘面外鑲黃銅邊框
+      const clockBezel = new THREE.Mesh(new THREE.TorusGeometry(0.88, 0.06, 8, 24), copperMat);
+      clockBezel.position.set(wx, 10.4, wz);
+      clockBezel.rotation.y = angle;
+      group.add(clockBezel);
+
+      // 鐘面下方木質百葉透氣窗
+      const louverBox = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 0.15), louverMat);
+      louverBox.position.set(wx * 0.98, 8.4, wz * 0.98);
+      louverBox.rotation.y = angle;
+      group.add(louverBox);
+    }
+
+    // D. 頂層六角攢尖雙重頂 (Hexagonal Double-Hip Roof)
+    const lowerRoofGeom = new THREE.ConeGeometry(9.8, 3.2, 6);
+    const lowerRoof = new THREE.Mesh(lowerRoofGeom, roofTileMat);
+    lowerRoof.position.y = 13.1;
+    group.add(lowerRoof);
+
+    // 六角歇山採光小閣樓 (Lantern Tower)
+    const lanternGeom = new THREE.CylinderGeometry(3.6, 4.0, 1.6, 6);
+    const lantern = new THREE.Mesh(lanternGeom, woodMat);
+    lantern.position.y = 14.8;
+    group.add(lantern);
+
+    // 最頂層六角小尖頂
+    const topRoofGeom = new THREE.ConeGeometry(4.4, 2.8, 6);
+    const topRoof = new THREE.Mesh(topRoofGeom, roofTileMat);
+    topRoof.position.y = 17.0;
+    group.add(topRoof);
+
+    // 樓頂純銅避雷針與金屬寶頂 (Spire & Finial)
+    const spireGeom = new THREE.CylinderGeometry(0.08, 0.35, 3.2, 8);
+    const spire = new THREE.Mesh(spireGeom, copperMat);
+    spire.position.y = 19.8;
     group.add(spire);
 
-    // E. 三翼放射狀傳統市場長廊 (Three Radiating Wings)
-    const wingMat = new THREE.MeshLambertMaterial({ color: 0x718093 });
-    [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3].forEach(ang => {
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(6.5, 4.2, 22), wingMat);
-      wing.position.set(Math.sin(ang) * 16, 2.6, Math.cos(ang) * 16);
-      wing.rotation.y = ang;
-      group.add(wing);
+    const finialBall = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 12), copperMat);
+    finialBall.position.y = 18.6;
+    group.add(finialBall);
 
-      // 屋脊三角雙坡斜頂
-      const ridge = new THREE.Mesh(new THREE.ConeGeometry(5.2, 2.2, 4), roofMat);
-      ridge.position.set(Math.sin(ang) * 16, 5.6, Math.cos(ang) * 16);
-      ridge.rotation.y = ang + Math.PI / 4;
-      group.add(ridge);
+    // E. 三翼放射狀傳統市場長廊 (Three Radiating Wings, 完整雙坡長瓦屋頂與攤位街廓)
+    // 翼長度 23m，自中心 r=9.5 延伸至 r=32.5，寬 7.2m
+    const wingLength = 23;
+    const wingWidth = 7.4;
+    const wingHeight = 4.4;
+    const wingAngles = [0, (2 * Math.PI) / 3, (4 * Math.PI) / 3];
+
+    // 知名老字號攤位清單
+    const stallsData = [
+      [
+        { name: '老賴紅茶', sub: '創立於1980 · 招牌豆香紅茶' },
+        { name: '山河魯肉飯', sub: '三代傳承 · 炭火爌肉飯 · 麻薏湯' },
+        { name: '阿嬤相思麵店', sub: '正宗傳統白麵 · 自製辣菜' }
+      ],
+      [
+        { name: '顏記肉包', sub: '六十年老店 · 鮮肉包 · 餛飩湯' },
+        { name: '丁山肉丸', sub: '百年老店 · 酥皮肉圓 · 紅糟肉' },
+        { name: '六角樓咖啡', sub: '精品手沖 · 古蹟烘焙豆' }
+      ],
+      [
+        { name: '嵐肉燥專賣店', sub: '米其林推薦 · 梅花豬肉燥' },
+        { name: '茂川肉丸', sub: '米其林必比登 · 古法炊蒸' },
+        { name: '天天饅頭', sub: '日式油炸紅豆饅頭 · 銅板點心' }
+      ]
+    ];
+
+    wingAngles.forEach((ang, wingIdx) => {
+      const wingCenterDist = 9.5 + wingLength / 2;
+      const wx = Math.sin(ang) * wingCenterDist;
+      const wz = Math.cos(ang) * wingCenterDist;
+
+      // 1. 長廊地坪 (磨石子與紅地磚)
+      const wFloorGeom = new THREE.BoxGeometry(wingWidth, 0.35, wingLength);
+      const wFloor = new THREE.Mesh(wFloorGeom, floorMat);
+      wFloor.position.set(wx, 0.18, wz);
+      wFloor.rotation.y = ang;
+      wFloor.receiveShadow = true;
+      group.add(wFloor);
+
+      // 2. 雙側木造支撐承重列柱 (每邊 6 根立柱)
+      const postGeom = new THREE.BoxGeometry(0.32, wingHeight, 0.32);
+      for (let s = -1; s <= 1; s += 2) {
+        for (let step = 0; step < 6; step++) {
+          const lz = -wingLength / 2 + 1.8 + step * 3.8;
+          const lx = s * (wingWidth / 2 - 0.3);
+
+          const post = new THREE.Mesh(postGeom, woodMat);
+          // 局部轉換至長廊旋轉角度
+          const px = wx + Math.cos(ang) * lx + Math.sin(ang) * lz;
+          const pz = wz - Math.sin(ang) * lx + Math.cos(ang) * lz;
+          post.position.set(px, wingHeight / 2 + 0.3, pz);
+          post.rotation.y = ang;
+          group.add(post);
+        }
+      }
+
+      // 3. 完整雙坡連續歇山長廊瓦頂 (Continuous Pitched Gable Roof)
+      // 三角斷面形狀：底寬 wingWidth + 1.2，高 2.4m
+      const roofShape = new THREE.Shape();
+      const rw = (wingWidth + 1.4) / 2;
+      roofShape.moveTo(-rw, 0);
+      roofShape.lineTo(0, 2.4);
+      roofShape.lineTo(rw, 0);
+      roofShape.closePath();
+
+      const roofGeom = new THREE.ExtrudeGeometry(roofShape, {
+        depth: wingLength + 0.8,
+        bevelEnabled: false
+      });
+      roofGeom.translate(0, 0, -(wingLength + 0.8) / 2);
+
+      const pitchedRoof = new THREE.Mesh(roofGeom, roofTileMat);
+      pitchedRoof.position.set(wx, wingHeight + 0.3, wz);
+      pitchedRoof.rotation.y = ang;
+      pitchedRoof.castShadow = true;
+      group.add(pitchedRoof);
+
+      // 屋脊正脊金屬裝飾條 (Ridge Board)
+      const ridgeBar = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.35, wingLength + 1.0),
+        darkTileMat
+      );
+      ridgeBar.position.set(wx, wingHeight + 2.85, wz);
+      ridgeBar.rotation.y = ang;
+      group.add(ridgeBar);
+
+      // 4. 長廊內部傳統小吃攤位 (Stalls & Stanchions)
+      const wingStalls = stallsData[wingIdx] || [];
+      wingStalls.forEach((stall, sIdx) => {
+        const sideSign = sIdx % 2 === 0 ? 1 : -1;
+        const lz = -wingLength / 2 + 4.5 + sIdx * 5.8;
+        const lx = sideSign * (wingWidth / 2 - 1.4);
+
+        // 攤位櫃台 (木製小吃料理台)
+        const counter = new THREE.Mesh(
+          new THREE.BoxGeometry(2.4, 0.9, 1.2),
+          lightWoodMat
+        );
+        const cx = wx + Math.cos(ang) * lx + Math.sin(ang) * lz;
+        const cz = wz - Math.sin(ang) * lx + Math.cos(ang) * lz;
+        counter.position.set(cx, 0.45 + 0.3, cz);
+        counter.rotation.y = ang;
+        group.add(counter);
+
+        // 攤位招牌 (百年老字號招牌)
+        const signTex = LandmarkTextureHelper.createMarketStallTexture(stall.name, stall.sub);
+        const stallSign = new THREE.Mesh(
+          new THREE.BoxGeometry(2.2, 0.85, 0.12),
+          new THREE.MeshStandardMaterial({ map: signTex, roughness: 0.4 })
+        );
+        stallSign.position.set(cx, 2.5, cz);
+        stallSign.rotation.y = ang + (sideSign === 1 ? -Math.PI / 2 : Math.PI / 2);
+        group.add(stallSign);
+
+        // 紅色宮燈 (暖色傳統吊燈)
+        const lantern = new THREE.Mesh(
+          new THREE.SphereGeometry(0.32, 10, 10),
+          redLanternMat
+        );
+        lantern.scale.set(1, 1.25, 1);
+        lantern.position.set(cx, 3.2, cz);
+        group.add(lantern);
+      });
+
+      // 5. 各長廊外側端頭復古山牆入口牌樓 (Gable Entry Portal)
+      const endDist = 9.5 + wingLength;
+      const ex = Math.sin(ang) * endDist;
+      const ez = Math.cos(ang) * endDist;
+
+      const portalFrame = new THREE.Mesh(
+        new THREE.BoxGeometry(wingWidth, 1.2, 0.6),
+        brickMat
+      );
+      portalFrame.position.set(ex, wingHeight - 0.4, ez);
+      portalFrame.rotation.y = ang;
+      group.add(portalFrame);
+
+      const wingTitles = [
+        '臺中第二市場 · 三民路正門',
+        '臺中第二市場 · 中山路入口',
+        '臺中第二市場 · 臺灣大道側門'
+      ];
+      const portalSignTex = LandmarkTextureHelper.createMarketStallTexture(
+        wingTitles[wingIdx],
+        '百年風華 · 1917 歷史建築'
+      );
+      const portalSign = new THREE.Mesh(
+        new THREE.PlaneGeometry(5.2, 1.1),
+        new THREE.MeshStandardMaterial({ map: portalSignTex, roughness: 0.4 })
+      );
+      portalSign.position.set(
+        ex + Math.sin(ang) * 0.35,
+        wingHeight - 0.4,
+        ez + Math.cos(ang) * 0.35
+      );
+      portalSign.rotation.y = ang;
+      group.add(portalSign);
     });
-
-    // F. 市場復古書法牌樓「臺中第二市場」
-    const signPlate = new THREE.Mesh(new THREE.BoxGeometry(4.8, 1.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xc0392b }));
-    signPlate.position.set(0, 4.8, 9.8);
-    const goldText = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.6, 0.1), new THREE.MeshStandardMaterial({ color: 0xf1c40f }));
-    goldText.position.set(0, 0, 0.2);
-    signPlate.add(goldText);
-    group.add(signPlate);
 
     return group;
   }

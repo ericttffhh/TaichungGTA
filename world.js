@@ -526,18 +526,146 @@ class WorldBuilder {
 
     this.scene.add(pandaScooter);
 
-    // 3. 台灣紅綠雙筒郵筒
+    // 3. 中華郵政經典紅綠雙筒郵筒 (Chunghwa Post Red & Green Mailboxes)
     const mailGroup = new THREE.Group();
     mailGroup.position.set(19.2, 0, -12);
-    [-0.45, 0.45].forEach((mx, idx) => {
-      const b = new THREE.Mesh(
-        new THREE.BoxGeometry(0.42, 1.1, 0.38),
-        new THREE.MeshStandardMaterial({ color: idx === 0 ? 0x27ae60 : 0xd63031, roughness: 0.4 })
-      );
-      b.position.set(mx, 0.85, 0);
-      mailGroup.add(b);
+
+    const postBase = new THREE.Mesh(
+      new THREE.BoxGeometry(1.3, 0.08, 0.65),
+      new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.9 })
+    );
+    postBase.position.y = 0.04;
+    mailGroup.add(postBase);
+
+    [-0.42, 0.42].forEach((mx, idx) => {
+      const isGreen = (idx === 0);
+      const boxCol = isGreen ? 0x00843d : 0xd32f2f;
+      const boxMat = new THREE.MeshStandardMaterial({ color: boxCol, roughness: 0.35, metalness: 0.1 });
+      const darkMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+      const whiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+
+      // 鑄鐵支柱腳
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.45, 8), darkMat);
+      leg.position.set(mx, 0.25, 0);
+      mailGroup.add(leg);
+
+      // 郵筒箱體主身
+      const mailbox = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.85, 0.38), boxMat);
+      mailbox.position.set(mx, 0.88, 0);
+      mailGroup.add(mailbox);
+
+      // 郵筒頂蓋 (微圓角斜頂)
+      const cap = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.42), boxMat);
+      cap.position.set(mx, 1.34, 0);
+      mailGroup.add(cap);
+
+      // 投信口 (橫向狹縫)
+      const slot = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.02), darkMat);
+      slot.position.set(mx, 1.15, 0.195);
+      mailGroup.add(slot);
+
+      // 中華郵政綠/紅圓形標章與時刻表牌
+      const emblem = new THREE.Mesh(new THREE.CircleGeometry(0.065, 12), whiteMat);
+      emblem.position.set(mx, 0.98, 0.195);
+      mailGroup.add(emblem);
+
+      const tablePlate = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.01), whiteMat);
+      tablePlate.position.set(mx, 0.72, 0.195);
+      mailGroup.add(tablePlate);
     });
     this.scene.add(mailGroup);
+
+    // 4. 街頭智慧 GoStation 電池交換站 (Gogoro Battery Swap Station)
+    const goStation = new THREE.Group();
+    goStation.position.set(-19.2, 0, 8);
+    goStation.rotation.y = Math.PI / 2;
+
+    const goBase = new THREE.Mesh(
+      new THREE.BoxGeometry(1.6, 0.08, 0.7),
+      new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.8 })
+    );
+    goBase.position.y = 0.04;
+    goStation.add(goBase);
+
+    // 機櫃主體 (霧黑耐候金屬機櫃)
+    const cabinet = new THREE.Mesh(
+      new THREE.BoxGeometry(1.45, 1.9, 0.55),
+      new THREE.MeshStandardMaterial({ color: 0x11161b, roughness: 0.4, metalness: 0.6 })
+    );
+    cabinet.position.y = 1.0;
+    goStation.add(cabinet);
+
+    // 頂部發光 Gogoro Logo 與指示燈幕
+    const logoBar = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 0.22, 0.04),
+      new THREE.MeshStandardMaterial({ color: 0x00d2d3, emissive: 0x01a3a4, emissiveIntensity: 0.7 })
+    );
+    logoBar.position.set(0, 1.78, 0.285);
+    goStation.add(logoBar);
+
+    // 中央觸控螢幕
+    const screen = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.38, 0.02),
+      new THREE.MeshBasicMaterial({ color: 0x0abde3 })
+    );
+    screen.position.set(0, 1.35, 0.285);
+    goStation.add(screen);
+
+    // 8 個微發光綠色電池插槽 (2 排 x 4 格)
+    const battMat = new THREE.MeshStandardMaterial({
+      color: 0x10ac84,
+      emissive: 0x1dd1a1,
+      emissiveIntensity: 0.6,
+      roughness: 0.3
+    });
+    for (let r = 0; r < 2; r++) {
+      for (let c = 0; c < 4; c++) {
+        const bx = -0.45 + c * 0.3;
+        const by = 0.45 + r * 0.35;
+        const battSlot = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.25, 0.03), battMat);
+        battSlot.position.set(bx, by, 0.285);
+        goStation.add(battSlot);
+
+        // 電池黑色提把
+        const handle = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.03, 0.04),
+          new THREE.MeshStandardMaterial({ color: 0x222f3e })
+        );
+        handle.position.set(bx, by, 0.305);
+        goStation.add(handle);
+      }
+    }
+    this.scene.add(goStation);
+
+    // 5. 街角飲料自動販賣機 (Japanese/Taiwanese Beverage Vending Machine)
+    const vendGroup = new THREE.Group();
+    vendGroup.position.set(-19.2, 0, 48);
+    vendGroup.rotation.y = Math.PI / 2;
+
+    const vendBody = new THREE.Mesh(
+      new THREE.BoxGeometry(1.2, 1.95, 0.8),
+      new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.35, metalness: 0.3 })
+    );
+    vendBody.position.y = 1.0;
+    vendGroup.add(vendBody);
+
+    // 上層發光飲料展示窗
+    const dispWindow = new THREE.Mesh(
+      new THREE.BoxGeometry(1.05, 0.85, 0.05),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xfff0c2, emissiveIntensity: 0.5, roughness: 0.1 })
+    );
+    dispWindow.position.set(0, 1.35, 0.41);
+    vendGroup.add(dispWindow);
+
+    // 下層取物口
+    const outlet = new THREE.Mesh(
+      new THREE.BoxGeometry(0.85, 0.32, 0.12),
+      new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.8 })
+    );
+    outlet.position.set(0, 0.35, 0.41);
+    vendGroup.add(outlet);
+
+    this.scene.add(vendGroup);
   }
 
   // 8. ★★★ 3D 街頭路人與即時螢幕對話泡泡 (Taipei-Rush 經典「真的假的？」泡泡) ★★★

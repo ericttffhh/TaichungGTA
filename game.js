@@ -15,7 +15,7 @@ import { LandmarkBuilder } from './landmarkBuilder.js';
 import { soundManager } from './soundSystem.js';
 import { TaiwanTrafficSignalSystem, TaiwanStreetscapeTextures } from './taiwanStreetscape.js';
 import { PlayerCharacter } from './playerCharacter.js';
-import { buildTaxi, buildPoliceCar, buildSupercar, buildTruck, buildBus, createWheel } from './vehicleModels.js';
+import { buildSedan, buildTaxi, buildPoliceCar, buildSupercar, buildTruck, buildBus, createWheel } from './vehicleModels.js';
 
 window.THREE = THREE;
 window.CANNON = CANNON;
@@ -2921,13 +2921,13 @@ class TrafficSystem {
   initPool() {
     if (!this.roadSegments || this.roadSegments.length === 0) return;
 
-    // 建立 24 輛 AI 車輛 (包含 4 輛台灣警車、6 輛小黃計程車、10 輛一般轎車、4 輛經典機車)
+    // 建立 24 輛高精細 AI 車輛 (包含警察巡邏車、小黃計程車、發財小貨車、轎跑車與台灣經典機車)
     const types = [
+      'police', 'taxi', 'sedan', 'truck', 'scooter',
+      'police', 'taxi', 'sedan', 'truck', 'scooter',
       'police', 'taxi', 'sedan', 'sedan', 'scooter',
-      'police', 'taxi', 'sedan', 'sedan', 'scooter',
-      'police', 'taxi', 'sedan', 'sedan', 'taxi',
-      'police', 'taxi', 'sedan', 'sedan', 'taxi',
-      'scooter', 'sedan', 'sedan', 'scooter'
+      'police', 'taxi', 'sedan', 'truck', 'scooter',
+      'scooter', 'sedan', 'taxi', 'truck'
     ];
 
     types.forEach((type, idx) => {
@@ -2942,8 +2942,10 @@ class TrafficSystem {
         strobes = this.buildPoliceCar(group);
       } else if (type === 'taxi') {
         this.buildTaxi(group);
+      } else if (type === 'truck') {
+        this.buildTruck(group);
       } else if (type === 'scooter') {
-        this.buildScooter(group);
+        this.buildScooter(group, idx);
       } else {
         const colors = [0xf8f9fa, 0x1e272e, 0x7f8c8d, 0x0984e3, 0xb2bec3];
         this.buildSedan(group, colors[idx % colors.length]);
@@ -2958,126 +2960,176 @@ class TrafficSystem {
         roadIdx,
         pointIdx: 0,
         t: Math.random(),
-        speed: type === 'police' ? 14 : (type === 'scooter' ? 10 : 11 + Math.random() * 3),
+        speed: type === 'police' ? 14 : (type === 'scooter' ? 10.5 : 11.5 + Math.random() * 3),
         laneOffset: 2.2 // 台灣靠右行駛車道偏移
       });
     });
   }
 
   buildSedan(group, color) {
-    const bodyMat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.6 });
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.9 });
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x1b1b1b, roughness: 0.8 });
-
-    // 底盤主車體
-    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.65, 4.2), bodyMat);
-    chassis.position.y = 0.55;
-    group.add(chassis);
-
-    // 車頂車窗駕駛艙
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 2.2), glassMat);
-    cabin.position.set(0, 1.15, -0.2);
-    group.add(cabin);
-
-    // 4 個輪胎
-    [-0.95, 0.95].forEach((wx) => {
-      [-1.3, 1.3].forEach((wz) => {
-        const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 12), wheelMat);
-        wheel.rotation.z = Math.PI / 2;
-        wheel.position.set(wx, 0.34, wz);
-        group.add(wheel);
-      });
-    });
-
-    // 頭燈與尾燈
-    const hLight = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.08), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    hLight.position.set(0, 0.6, 2.12);
-    group.add(hLight);
-
-    const tLight = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.12, 0.08), new THREE.MeshBasicMaterial({ color: 0xff1122 }));
-    tLight.position.set(0, 0.6, -2.12);
-    group.add(tLight);
+    const car = buildSedan({ paintColor: color });
+    group.add(car);
   }
 
   buildTaxi(group) {
-    this.buildSedan(group, 0xf1c40f);
-    // 車頂 TAXI 經典黃色發光燈箱
-    const taxiSign = new THREE.Mesh(
-      new THREE.BoxGeometry(0.7, 0.2, 0.3),
-      new THREE.MeshBasicMaterial({ color: 0xffeaa7 })
-    );
-    taxiSign.position.set(0, 1.55, -0.2);
-    group.add(taxiSign);
+    const taxi = buildTaxi();
+    group.add(taxi);
+  }
+
+  buildTruck(group) {
+    const truck = buildTruck();
+    group.add(truck);
   }
 
   buildPoliceCar(group) {
-    // 台灣經典黑白相間警車 (白車身、黑車門)
-    this.buildSedan(group, 0xffffff);
+    const car = buildPoliceCar();
+    group.add(car);
 
-    const blackDoorMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
-    [-0.94, 0.94].forEach((dx) => {
-      const door = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.55, 1.8), blackDoorMat);
-      door.position.set(dx, 0.58, -0.1);
-      group.add(door);
-    });
-
-    // 車頂紅藍警用爆閃排燈
-    const lightBarFrame = new THREE.Mesh(
-      new THREE.BoxGeometry(1.1, 0.08, 0.22),
-      new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8 })
-    );
-    lightBarFrame.position.set(0, 1.5, -0.2);
-    group.add(lightBarFrame);
-
+    // 警車車頂紅藍爆閃特效燈
     const leftStrobe = new THREE.Mesh(
-      new THREE.BoxGeometry(0.48, 0.14, 0.2),
+      new THREE.BoxGeometry(0.38, 0.12, 0.15),
       new THREE.MeshBasicMaterial({ color: 0xff0022 })
     );
-    leftStrobe.position.set(-0.3, 1.58, -0.2);
+    leftStrobe.position.set(-0.3, 1.58, -0.1);
     group.add(leftStrobe);
 
     const rightStrobe = new THREE.Mesh(
-      new THREE.BoxGeometry(0.48, 0.14, 0.2),
+      new THREE.BoxGeometry(0.38, 0.12, 0.15),
       new THREE.MeshBasicMaterial({ color: 0x0055ff })
     );
-    rightStrobe.position.set(0.3, 1.58, -0.2);
+    rightStrobe.position.set(0.3, 1.58, -0.1);
     group.add(rightStrobe);
 
     return { leftStrobe, rightStrobe };
   }
 
-  buildScooter(group) {
-    const scMat = new THREE.MeshStandardMaterial({ color: 0x2d3436, roughness: 0.4 });
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x0984e3, roughness: 0.3 });
-    const riderMat = new THREE.MeshStandardMaterial({ color: 0xd63031 });
-    const helmetMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
+  buildScooter(group, seed = 0) {
+    const scColors = [0x1976d2, 0xd32f2f, 0x2c3e50, 0xf5f6fa, 0xfbc02d, 0x388e3c];
+    const paintColor = scColors[seed % scColors.length];
 
-    // 機車車身
-    const scBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.5, 1.8), bodyMat);
-    scBody.position.y = 0.45;
-    group.add(scBody);
+    const paintMat = new THREE.MeshStandardMaterial({ color: paintColor, roughness: 0.3, metalness: 0.4 });
+    const matteMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.85 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xecf0f1, roughness: 0.2, metalness: 0.85 });
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const amberMat = new THREE.MeshBasicMaterial({ color: 0xff9800 });
+    const tailMat = new THREE.MeshBasicMaterial({ color: 0xff1744 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x15171a, roughness: 0.9 });
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.75 });
 
-    // 龍頭把手
-    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.08), scMat);
-    handle.position.set(0, 0.9, 0.6);
-    group.add(handle);
+    // 1. 底盤踏板
+    const floorboard = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.65), matteMat);
+    floorboard.position.set(0, 0.32, 0.1);
+    group.add(floorboard);
 
-    // 前後輪
-    [-0.65, 0.65].forEach((wz) => {
-      const w = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.14, 10), scMat);
-      w.rotation.z = Math.PI / 2;
-      w.position.set(0, 0.24, wz);
-      group.add(w);
+    // 2. 空氣力學運動化車頭斜板 (Cowl)
+    const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.56, 0.4), paintMat);
+    cowl.position.set(0, 0.7, 0.65);
+    cowl.rotation.x = -0.22;
+    group.add(cowl);
+
+    // 雙鷹眼 LED 大燈
+    [-0.14, 0.14].forEach((lx) => {
+      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.07, 0.04), lightMat);
+      eye.position.set(lx, 0.72, 0.85);
+      eye.rotation.x = -0.22;
+      group.add(eye);
+
+      const sig = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.04, 0.03), amberMat);
+      sig.position.set(lx * 1.45, 0.66, 0.81);
+      group.add(sig);
     });
 
-    // 騎士身體與安全帽
-    const rider = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.6, 0.4), riderMat);
-    rider.position.set(0, 0.95, -0.1);
-    group.add(rider);
+    // 3. 轉向龍頭與雙後視鏡
+    const handlebar = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.04, 0.04), matteMat);
+    handlebar.position.set(0, 1.05, 0.52);
+    group.add(handlebar);
 
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 10), helmetMat);
-    helmet.position.set(0, 1.4, -0.1);
+    [-0.32, 0.32].forEach((mx) => {
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.02), matteMat);
+      mirror.position.set(mx, 1.16, 0.54);
+      group.add(mirror);
+      const mirrorStem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12), chromeMat);
+      mirrorStem.position.set(mx * 0.9, 1.1, 0.53);
+      group.add(mirrorStem);
+    });
+
+    // 4. 車身座墊與尾翼扶手
+    const bodyRear = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.42, 0.75), paintMat);
+    bodyRear.position.set(0, 0.6, -0.32);
+    group.add(bodyRear);
+
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.14, 0.72), seatMat);
+    seat.position.set(0, 0.82, -0.28);
+    group.add(seat);
+
+    const tailLight = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.04), tailMat);
+    tailLight.position.set(0, 0.7, -0.72);
+    group.add(tailLight);
+
+    // 白牌機車車牌 (例如: GTY-5888)
+    const plate = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.12, 0.01),
+      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })
+    );
+    plate.position.set(0, 0.5, -0.78);
+    plate.rotation.x = -0.2;
+    group.add(plate);
+
+    // 5. 排氣管與運動防燙蓋
+    const muffler = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.62, 8), matteMat);
+    muffler.rotation.x = Math.PI / 2;
+    muffler.position.set(0.24, 0.3, -0.48);
+    group.add(muffler);
+
+    // 6. 前後 10 吋輪胎與輪圈
+    [-0.62, 0.75].forEach((wz) => {
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 12), tireMat);
+      tire.rotation.z = Math.PI / 2;
+      tire.position.set(0, 0.26, wz);
+      group.add(tire);
+
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.13, 10), chromeMat);
+      rim.rotation.z = Math.PI / 2;
+      rim.position.set(0, 0.26, wz);
+      group.add(rim);
+    });
+
+    // 7. 台中通勤騎士 (身著夾克、安全帽與牛仔褲)
+    const riderSkin = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.6 });
+    const riderJacket = new THREE.MeshStandardMaterial({ color: (seed % 2 === 0 ? 0x2c3e50 : 0xb71540), roughness: 0.6 });
+    const riderJeans = new THREE.MeshStandardMaterial({ color: 0x34495e, roughness: 0.8 });
+    const helmetCol = new THREE.MeshStandardMaterial({ color: (seed % 3 === 0 ? 0xffffff : (seed % 3 === 1 ? 0xf39c12 : 0x1e272e)), roughness: 0.3 });
+
+    // 騎士軀幹
+    const riderBody = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.52, 0.26), riderJacket);
+    riderBody.position.set(0, 1.05, -0.15);
+    riderBody.rotation.x = 0.15;
+    group.add(riderBody);
+
+    // 騎士安全帽 (含風鏡面罩)
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), helmetCol);
+    helmet.position.set(0, 1.45, -0.08);
     group.add(helmet);
+
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.08), new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    visor.position.set(0, 1.45, 0.08);
+    group.add(visor);
+
+    // 騎士雙臂握龍頭
+    [-0.22, 0.22].forEach(ax => {
+      const arm = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.38, 0.1), riderJacket);
+      arm.position.set(ax, 1.1, 0.15);
+      arm.rotation.x = -0.9;
+      group.add(arm);
+    });
+
+    // 騎士腿部
+    [-0.15, 0.15].forEach(lx => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.42, 0.14), riderJeans);
+      leg.position.set(lx, 0.65, 0.05);
+      leg.rotation.x = 0.4;
+      group.add(leg);
+    });
   }
 
   update(dt, playerVehicle) {
@@ -3688,40 +3740,71 @@ class PedestrianSystem {
     return { torso: torsoMesh, leftArm, rightArm, leftLeg, rightLeg, head };
   }
 
-  // 一般市民與巡邏警察造型
+  // 一般市民與巡邏警察造型 (高精細人體比例、鞋履、手掌、警用戰術反光背心與執勤裝備)
   buildCitizenHumanoid(group, isPolice, seed = 0) {
     const skinTones = [0xffdbac, 0xf1c27d, 0xe0ac69, 0xc68642];
     const skinMat = new THREE.MeshStandardMaterial({
       color: skinTones[seed % skinTones.length],
       roughness: 0.65
     });
-    const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.9 });
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x1e272e, roughness: 0.85 });
+    const shoeDarkMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const shoeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
+    const goldMat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8, roughness: 0.2 });
 
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24), skinMat);
-    head.position.y = 1.62;
-    group.add(head);
+    // 1. 頭部與五官細節
+    const headGroup = new THREE.Group();
+    headGroup.position.set(0, 1.62, 0);
+
+    const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.26, 0.24), skinMat);
+    headGroup.add(headMesh);
 
     if (isPolice) {
+      // 警官大盤帽 (深藍底 + 金色警徽)
       const policeCap = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.19, 0.16, 0.1, 10),
-        new THREE.MeshStandardMaterial({ color: 0x1a252f })
+        new THREE.CylinderGeometry(0.20, 0.16, 0.12, 12),
+        new THREE.MeshStandardMaterial({ color: 0x101b2b, roughness: 0.5 })
       );
-      policeCap.position.set(0, 1.77, 0.02);
-      group.add(policeCap);
-    } else {
-      const hair = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.1, 0.26), hairMat);
-      hair.position.set(0, 1.76, 0);
-      group.add(hair);
-    }
+      policeCap.position.set(0, 0.15, 0.02);
+      headGroup.add(policeCap);
 
+      const capVisor = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.02, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.2 })
+      );
+      capVisor.position.set(0, 0.10, 0.14);
+      headGroup.add(capVisor);
+
+      const capBadge = new THREE.Mesh(new THREE.CircleGeometry(0.035, 6), goldMat);
+      capBadge.position.set(0, 0.16, 0.18);
+      headGroup.add(capBadge);
+    } else {
+      // 市民層次髮型或太陽眼鏡
+      const hair = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.26), hairMat);
+      hair.position.set(0, 0.14, 0);
+      headGroup.add(hair);
+
+      if (seed % 3 === 0) {
+        // 時尚太陽眼鏡
+        const sunglasses = new THREE.Mesh(
+          new THREE.BoxGeometry(0.22, 0.06, 0.04),
+          new THREE.MeshPhysicalMaterial({ color: 0x0a0a0a, roughness: 0.1, clearcoat: 1 })
+        );
+        sunglasses.position.set(0, 0.04, 0.13);
+        headGroup.add(sunglasses);
+      }
+    }
+    group.add(headGroup);
+
+    // 2. 服裝與軀幹 (Police: 藏青警察制服 + 螢光黃透氣反光背心)
     let shirtMat, pantsMat;
     if (isPolice) {
-      shirtMat = new THREE.MeshStandardMaterial({ color: 0xccff00, roughness: 0.5 });
-      pantsMat = new THREE.MeshStandardMaterial({ color: 0x1a252f, roughness: 0.8 });
+      shirtMat = new THREE.MeshStandardMaterial({ color: 0x162238, roughness: 0.6 });
+      pantsMat = new THREE.MeshStandardMaterial({ color: 0x101726, roughness: 0.8 });
     } else {
-      const shirtColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf1c40f, 0xe67e22, 0xecf0f1, 0x34495e, 0x9b59b6];
+      const shirtColors = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6, 0xf5f6fa, 0x34495e, 0x16a085];
       shirtMat = new THREE.MeshStandardMaterial({ color: shirtColors[seed % shirtColors.length], roughness: 0.6 });
-      const pantsColors = [0x2c3e50, 0x34495e, 0x1e272e, 0x7f8c8d];
+      const pantsColors = [0x2c3e50, 0x34495e, 0x1e272e, 0x7f8c8d, 0x576574];
       pantsMat = new THREE.MeshStandardMaterial({ color: pantsColors[(seed * 2) % pantsColors.length], roughness: 0.8 });
     }
 
@@ -3729,29 +3812,88 @@ class PedestrianSystem {
     torso.position.y = 1.18;
     group.add(torso);
 
-    const armGeom = new THREE.BoxGeometry(0.1, 0.52, 0.1);
-    armGeom.translate(0, -0.24, 0);
+    if (isPolice) {
+      // 螢光高反光戰術背心 (Fluorescent Lime Safety Vest)
+      const vestMat = new THREE.MeshStandardMaterial({ color: 0xd4f500, roughness: 0.4 });
+      const silverReflectMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.2, metalness: 0.8 });
 
-    const leftArm = new THREE.Mesh(armGeom, shirtMat);
-    leftArm.position.set(0.26, 1.42, 0);
-    group.add(leftArm);
+      const vest = new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.48, 0.23), vestMat);
+      vest.position.set(0, 1.22, 0);
+      group.add(vest);
 
-    const rightArm = new THREE.Mesh(armGeom, shirtMat);
-    rightArm.position.set(-0.26, 1.42, 0);
-    group.add(rightArm);
+      // 3M 銀色反光橫紋
+      const stripeH = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.05, 0.24), silverReflectMat);
+      stripeH.position.set(0, 1.15, 0);
+      group.add(stripeH);
 
-    const legGeom = new THREE.BoxGeometry(0.14, 0.66, 0.14);
-    legGeom.translate(0, -0.32, 0);
+      // 警用胸前金屬鴿子警徽
+      const badge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.07, 0.01), goldMat);
+      badge.position.set(-0.11, 1.32, 0.125);
+      group.add(badge);
 
-    const leftLeg = new THREE.Mesh(legGeom, pantsMat);
-    leftLeg.position.set(0.11, 0.72, 0);
-    group.add(leftLeg);
+      // 警用勤務腰帶 (S腰帶 + 無線電對講機)
+      const belt = new THREE.Mesh(new THREE.BoxGeometry(0.40, 0.08, 0.24), shoeDarkMat);
+      belt.position.set(0, 0.92, 0);
+      group.add(belt);
 
-    const rightLeg = new THREE.Mesh(legGeom, pantsMat);
-    rightLeg.position.set(-0.11, 0.72, 0);
-    group.add(rightLeg);
+      const radio = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.06), shoeDarkMat);
+      radio.position.set(0.19, 0.96, 0.04);
+      group.add(radio);
+    }
 
-    return { torso, leftArm, rightArm, leftLeg, rightLeg };
+    // 3. 雙手臂 (含衣袖與膚色手掌)
+    const createArm = (isLeft) => {
+      const armGroup = new THREE.Group();
+      armGroup.position.set(isLeft ? 0.26 : -0.26, 1.42, 0);
+
+      // 袖子部分 (長 0.36m)
+      const sleeve = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.36, 0.11), shirtMat);
+      sleeve.position.y = -0.18;
+      armGroup.add(sleeve);
+
+      // 手腕與手掌 (膚色，長 0.16m)
+      const hand = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.16, 0.09), skinMat);
+      hand.position.y = -0.44;
+      armGroup.add(hand);
+
+      group.add(armGroup);
+      return armGroup;
+    };
+
+    const leftArm = createArm(true);
+    const rightArm = createArm(false);
+
+    // 4. 雙腿 (含褲管與鞋子)
+    const createLeg = (isLeft) => {
+      const legGroup = new THREE.Group();
+      legGroup.position.set(isLeft ? 0.11 : -0.11, 0.72, 0);
+
+      // 褲管 (長 0.54m)
+      const pantsMesh = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.54, 0.14), pantsMat);
+      pantsMesh.position.y = -0.27;
+      legGroup.add(pantsMesh);
+
+      // 鞋履 (Police: 黑色戰術警靴; 市民: 休閒運動鞋帶白色橡膠大底)
+      const shoeMat = isPolice ? shoeDarkMat : (seed % 2 === 0 ? shoeWhiteMat : shoeDarkMat);
+      const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.22), shoeMat);
+      shoe.position.set(0, -0.60, 0.04);
+      legGroup.add(shoe);
+
+      if (!isPolice) {
+        // 運動鞋白底
+        const sole = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.23), shoeWhiteMat);
+        sole.position.set(0, -0.66, 0.04);
+        legGroup.add(sole);
+      }
+
+      group.add(legGroup);
+      return legGroup;
+    };
+
+    const leftLeg = createLeg(true);
+    const rightLeg = createLeg(false);
+
+    return { torso, leftArm, rightArm, leftLeg, rightLeg, head: headGroup };
   }
 
   update(dt, playerVehicle) {

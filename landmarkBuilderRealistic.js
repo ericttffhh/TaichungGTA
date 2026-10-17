@@ -223,75 +223,161 @@ export class RealisticLandmarks {
   }
 
   // =========================================================================
-  // 東海大學路思義教堂：貝聿銘雙曲拋物面薄殼 (長約 24m、寬 15m、高 15m)
+  // 東海大學路思義教堂：貝聿銘雙曲拋物面薄殼 (長約 26m、寬 16m、高 15m)
+  // 四片分離雙曲拋物面曲面、天窗採光玻璃帶、菱形琉璃磚、懸空十字架與東海草坪
   // =========================================================================
   static buildLuceMemorialChapel() {
     const group = new THREE.Group();
     group.name = 'luce_memorial_chapel';
 
-    const L = 12;   // 半長 (沿 x)
-    const B = 7.5;  // 半寬 (沿 z)
-    const H = 15;   // 山牆高度
-    const baseY = 0.4;
+    const L = 13;   // 半長 (沿 x)
+    const B = 8.0;  // 半寬 (沿 z)
+    const H = 15.2; // 山牆高度
+    const baseY = 0.35;
+
+    // 寬闊微傾斜草坪與洗石子基座
+    const lawnGeom = new THREE.BoxGeometry(L * 2 + 18, 0.3, B * 2 + 16);
+    const lawn = new THREE.Mesh(lawnGeom, new THREE.MeshLambertMaterial({ color: 0x437a3b }));
+    lawn.position.y = 0.15;
+    lawn.receiveShadow = true;
+    group.add(lawn);
 
     const podium = new THREE.Mesh(
       new THREE.BoxGeometry(L * 2 + 6, baseY, B * 2 + 5),
       new THREE.MeshLambertMaterial({ color: 0xd9d4c8 })
     );
-    podium.position.y = baseY / 2;
+    podium.position.y = baseY / 2 + 0.15;
+    podium.receiveShadow = true;
     group.add(podium);
 
     const tile = diamondTileTexture();
     tile.repeat.set(10, 5);
-    const shellMat = new THREE.MeshStandardMaterial({ map: tile, roughness: 0.4, metalness: 0.1, side: THREE.DoubleSide });
+    const shellMat = new THREE.MeshStandardMaterial({
+      map: tile,
+      roughness: 0.35,
+      metalness: 0.12,
+      side: THREE.DoubleSide
+    });
+    const ribMat = new THREE.MeshStandardMaterial({ color: 0xbfb6a4, roughness: 0.6 });
 
-    const buildShell = (s) => {
-      const geom = new THREE.PlaneGeometry(2, 1, 32, 16);
+    // 四片分離雙曲拋物面薄殼 (4 Distinct Hyperbolic Paraboloid Shells)
+    const buildShellQuarter = (sX, sZ) => {
+      const geom = new THREE.PlaneGeometry(1, 1, 24, 18);
       const pos = geom.attributes.position;
       const uv = geom.attributes.uv;
+
       for (let i = 0; i < pos.count; i++) {
-        const u = pos.getX(i);              // -1..1 (沿長度)
-        const w = pos.getY(i) + 0.5;        // 0 (屋脊) .. 1 (簷口)
-        pos.setXYZ(i, u * L, H * (1 - w) * (0.42 + 0.58 * u * u) + baseY, s * w * B);
-        uv.setXY(i, u * 0.5 + 0.5, w);
+        const u = pos.getX(i) + 0.5; // 0 (中心) .. 1 (端點山牆)
+        const w = pos.getY(i) + 0.5; // 0 (脊線採光帶縫隙) .. 1 (落地基礎)
+
+        // 雙曲拋物面幾何方程式 (中間收緊高聳、兩端舒展低伏)
+        const curX = sX * (u * (L - 0.25) + 0.25);
+        const curY = H * (1 - w * 0.95) * (0.38 + 0.62 * u * u) + baseY;
+        const curZ = sZ * (w * (B - 0.3) + 0.25);
+
+        pos.setXYZ(i, curX, curY, curZ);
+        uv.setXY(i, u, w);
       }
       geom.computeVertexNormals();
-      return new THREE.Mesh(geom, shellMat);
+      const mesh = new THREE.Mesh(geom, shellMat);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      return mesh;
     };
-    group.add(buildShell(1), buildShell(-1));
 
-    // 兩端山牆玻璃 + 白色框
-    const glassMat = new THREE.MeshStandardMaterial({
-      color: 0x9fe3ea, metalness: 0.4, roughness: 0.12, transparent: true, opacity: 0.7, side: THREE.DoubleSide
+    // 生成前左、前右、後左、後右四片曲面薄殼
+    group.add(
+      buildShellQuarter(1, 1),
+      buildShellQuarter(1, -1),
+      buildShellQuarter(-1, 1),
+      buildShellQuarter(-1, -1)
+    );
+
+    // 脊線採光玻璃帶 (Top Ridge Glass Skylight Slot)
+    const skylightMat = new THREE.MeshStandardMaterial({
+      color: 0x88d8f0,
+      metalness: 0.6,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.85
     });
+    const skylight = new THREE.Mesh(
+      new THREE.BoxGeometry(L * 2 - 1, 0.25, 0.5),
+      skylightMat
+    );
+    skylight.position.set(0, H + baseY - 0.1, 0);
+    group.add(skylight);
+
+    // 兩端山牆菱形鋼構玻璃帷幕 (Gable Glass Curtain Walls with Mullions)
+    const glassMat = new THREE.MeshStandardMaterial({
+      color: 0x9fe3ea,
+      metalness: 0.5,
+      roughness: 0.1,
+      transparent: true,
+      opacity: 0.72,
+      side: THREE.DoubleSide
+    });
+
     const gable = new THREE.Shape();
-    gable.moveTo(-B, 0); gable.lineTo(B, 0); gable.lineTo(0.35, H); gable.lineTo(-0.35, H); gable.lineTo(-B, 0);
+    gable.moveTo(-B, 0);
+    gable.lineTo(B, 0);
+    gable.lineTo(0.35, H);
+    gable.lineTo(-0.35, H);
+    gable.closePath();
+
     for (const sx of [1, -1]) {
       const g = new THREE.Mesh(new THREE.ShapeGeometry(gable), glassMat);
       g.rotation.y = Math.PI / 2;
       g.position.set(sx * L, baseY, 0);
       group.add(g);
+
+      // 菱形鋁合金鋼櫺格網
+      for (let gy = 2.0; gy < H - 1; gy += 2.2) {
+        const spanW = B * (1 - gy / H) * 2;
+        const mullion = new THREE.Mesh(
+          new THREE.BoxGeometry(0.12, 0.08, spanW),
+          ribMat
+        );
+        mullion.position.set(sx * L, baseY + gy, 0);
+        group.add(mullion);
+      }
     }
 
-    // 山牆頂白色十字架
-    const crossMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
-    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.22, 3.2, 0.22), crossMat);
-    crossV.position.set(L, baseY + H + 1.6, 0);
-    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.22, 1.6), crossMat);
-    crossH.position.set(L, baseY + H + 2.4, 0);
+    // 教堂內部神聖懸空白色十字架 (Iconic Interior Floating Cross)
+    const crossMat = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.2,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.4
+    });
+    const interiorCrossV = new THREE.Mesh(new THREE.BoxGeometry(0.25, 4.8, 0.25), crossMat);
+    interiorCrossV.position.set(0, baseY + 6.2, 0);
+    const interiorCrossH = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 2.4), crossMat);
+    interiorCrossH.position.set(0, baseY + 7.4, 0);
+    group.add(interiorCrossV, interiorCrossH);
+
+    // 山牆頂端外側純白十字架 (Roof Spire Cross)
+    const crossV = new THREE.Mesh(new THREE.BoxGeometry(0.25, 3.4, 0.25), crossMat);
+    crossV.position.set(L, baseY + H + 1.7, 0);
+    const crossH = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.25, 1.8), crossMat);
+    crossH.position.set(L, baseY + H + 2.5, 0);
     group.add(crossV, crossH);
 
-    // 入口平台台階
-    const steps = new THREE.Mesh(new THREE.BoxGeometry(5, 0.3, B * 2 + 2), new THREE.MeshLambertMaterial({ color: 0xc8c3b6 }));
-    steps.position.set(L + 3.5, 0.15, 0);
+    // 入口平台步階 (Grand Entrance Steps)
+    const steps = new THREE.Mesh(
+      new THREE.BoxGeometry(6, 0.35, B * 2 + 2),
+      new THREE.MeshLambertMaterial({ color: 0xc8c3b6 })
+    );
+    steps.position.set(L + 4.0, 0.175, 0);
+    steps.receiveShadow = true;
     group.add(steps);
 
     return group;
   }
 
   // =========================================================================
-  // 宮原眼科：1927 日治新巴洛克紅磚二層建築，一樓拱圈騎樓、二樓拱窗、四坡黑瓦屋頂
-  // 實際尺寸約 40m x 22m x 15m
+  // 宮原眼科：1927 日治新巴洛克紅磚二層建築與現代鋼構幾何採光天棚
+  // 一樓拱圈騎樓拱頂石、復古黃銅吊燈、二樓拱窗、古典紅磚雕花、綠川水岸
   // =========================================================================
   static buildMiyahara() {
     const group = new THREE.Group();
@@ -300,10 +386,18 @@ export class RealisticLandmarks {
     const W = 40, D = 22, H = 12;
     const brick = new THREE.MeshLambertMaterial({ map: brickTexture(), side: THREE.DoubleSide });
     const white = new THREE.MeshLambertMaterial({ color: 0xeee8da });
-    const dark = new THREE.MeshLambertMaterial({ color: 0x2a2220, emissive: 0x3d2a14, emissiveIntensity: 0.6 });
-    const glass = new THREE.MeshStandardMaterial({ color: 0x1c2b3a, metalness: 0.6, roughness: 0.2, emissive: 0x1a2a3a, emissiveIntensity: 0.5 });
+    const dark = new THREE.MeshLambertMaterial({ color: 0x1f1715, emissive: 0x2d1a0e, emissiveIntensity: 0.5 });
+    const glass = new THREE.MeshStandardMaterial({
+      color: 0x1c2b3a,
+      metalness: 0.6,
+      roughness: 0.18,
+      emissive: 0x152535,
+      emissiveIntensity: 0.45
+    });
+    const brassMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, roughness: 0.3, metalness: 0.85 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50, roughness: 0.4, metalness: 0.8 });
 
-    // 內核 (洞口後方暗色空間)
+    // 內核空間 (洞口後方展示霍格華茲風挑高木質書塔與金箔包裝櫃)
     const core = new THREE.Mesh(new THREE.BoxGeometry(W - 0.4, H, D - 0.4), dark);
     core.position.y = H / 2;
     group.add(core);
@@ -311,12 +405,12 @@ export class RealisticLandmarks {
     const frontHoles = () => {
       const holes = [];
       const bay = 5.0;
-      const n = Math.floor(W / bay); // 8 個拱圈
+      const n = Math.floor(W / bay); // 8 個連續拱圈
       const start = -(n * bay) / 2;
       for (let i = 0; i < n; i++) {
         const cx = start + bay * (i + 0.5);
-        holes.push(archHole(cx - 1.7, cx + 1.7, 0.05, 3.6));       // 一樓騎樓拱圈自地面 0.05m 開啟，徹底杜絕掩埋感
-        holes.push(archHole(cx - 1.0, cx + 1.0, 6.4, 8.9));       // 二樓拱窗
+        holes.push(archHole(cx - 1.7, cx + 1.7, 0.05, 3.6));
+        holes.push(archHole(cx - 1.0, cx + 1.0, 6.4, 8.9));
       }
       return holes;
     };
@@ -327,7 +421,7 @@ export class RealisticLandmarks {
       const start = -(n * bay) / 2;
       for (let i = 0; i < n; i++) {
         const cx = start + bay * (i + 0.5);
-        holes.push(archHole(cx - 1.2, cx + 1.2, 0.05, 3.4));       // 側向騎樓拱圈自地面開啟
+        holes.push(archHole(cx - 1.2, cx + 1.2, 0.05, 3.4));
         holes.push(archHole(cx - 1.0, cx + 1.0, 6.4, 8.9));
       }
       return holes;
@@ -335,7 +429,6 @@ export class RealisticLandmarks {
 
     const walls = new THREE.Group();
     addFourWalls(walls, W / 2, D / 2, H, 1.2, frontHoles, sideHoles, brick);
-    // 內縮使牆面外側貼齊外輪廓
     walls.children.forEach((m) => {
       const dir = new THREE.Vector3(m.position.x, 0, m.position.z).normalize();
       m.position.x -= dir.x * 1.2;
@@ -343,56 +436,118 @@ export class RealisticLandmarks {
     });
     group.add(walls);
 
-    // 二樓窗內玻璃 (位於洞口後方)
+    // 拱圈拱頂石 (Keystones) 與立柱柱頭雕花飾塊
+    const bayW = 5.0;
+    const startW = -(Math.floor(W / bayW) * bayW) / 2;
+    for (let i = 0; i < Math.floor(W / bayW); i++) {
+      const cx = startW + bayW * (i + 0.5);
+      // 一樓拱頂石
+      const ks1 = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.45, 0.35), white);
+      ks1.position.set(cx, 3.65, D / 2 + 0.05);
+      group.add(ks1);
+
+      // 二樓拱頂石
+      const ks2 = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.35), white);
+      ks2.position.set(cx, 8.95, D / 2 + 0.05);
+      group.add(ks2);
+
+      // 騎樓內部復古黃銅吊燈 (Vintage Brass Arcade Lanterns)
+      const lantern = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.16, 0.45, 8),
+        new THREE.MeshStandardMaterial({
+          color: 0xffeedd,
+          emissive: 0xffa502,
+          emissiveIntensity: 0.65,
+          roughness: 0.2
+        })
+      );
+      lantern.position.set(cx, 3.2, D / 2 - 2.2);
+      group.add(lantern);
+
+      const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.75, 6), brassMat);
+      chain.position.set(cx, 3.75, D / 2 - 2.2);
+      group.add(chain);
+    }
+
+    // 二樓窗內透光玻璃 (位於洞口後方)
     const glassBox = new THREE.Mesh(new THREE.BoxGeometry(W - 1.6, 4.2, D - 1.6), glass);
     glassBox.position.y = 7.6;
     group.add(glassBox);
 
-    // 白色橫向腰線與簷口
-    const belt = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.45, D + 0.6), white);
+    // 白色橫向古典水平飾帶與簷口線腳 (Cornice & Belt Courses)
+    const belt = new THREE.Mesh(new THREE.BoxGeometry(W + 0.8, 0.45, D + 0.8), white);
     belt.position.y = 5.2;
     group.add(belt);
-    const cornice = new THREE.Mesh(new THREE.BoxGeometry(W + 1.2, 0.9, D + 1.2), white);
+
+    const cornice = new THREE.Mesh(new THREE.BoxGeometry(W + 1.4, 0.9, D + 1.4), white);
     cornice.position.y = H + 0.45;
     group.add(cornice);
 
-    // 四坡黑瓦屋頂
-    const roofGeom = new THREE.ConeGeometry(1, 3.6, 4, 1, false);
-    roofGeom.rotateY(Math.PI / 4);
-    const roof = new THREE.Mesh(roofGeom, new THREE.MeshLambertMaterial({ color: 0x3a3f46, side: THREE.DoubleSide }));
-    roof.scale.set((W + 1.0) / 2 / 0.7071, 1, (D + 1.0) / 2 / 0.7071);
-    roof.position.y = H + 0.9 + 1.8;
-    group.add(roof);
+    // 【重要建築特色】：現代幾何鋼構斜面玻璃採光天棚 (Modern Geometric Steel & Glass Roof)
+    // 宮原眼科最著名的是在古蹟紅磚之上加蓋的幾何三角玻璃天窗
+    const skylightGeo = new THREE.ConeGeometry(1, 4.2, 4, 1, false);
+    skylightGeo.rotateY(Math.PI / 4);
+    const skylightRoof = new THREE.Mesh(
+      skylightGeo,
+      new THREE.MeshStandardMaterial({
+        color: 0x487eb0,
+        metalness: 0.7,
+        roughness: 0.15,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      })
+    );
+    skylightRoof.scale.set((W + 1.0) / 2 / 0.7071, 1, (D + 1.0) / 2 / 0.7071);
+    skylightRoof.position.y = H + 0.9 + 2.1;
+    group.add(skylightRoof);
 
-    // 屋頂老虎窗
+    // 天棚幾何鋼構外骨架 (Steel Trusses)
+    for (const sx of [-12, -6, 0, 6, 12]) {
+      const truss = new THREE.Mesh(new THREE.BoxGeometry(0.18, 4.4, 0.18), steelMat);
+      truss.position.set(sx, H + 2.8, 0);
+      group.add(truss);
+    }
+
+    // 屋頂老虎窗 (Dormers)
     for (const cx of [-12, 0, 12]) {
       const dormer = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.6, 1.6), brick);
       dormer.position.set(cx, H + 1.8, D / 2 - 3.6);
       group.add(dormer);
-      const cap = new THREE.Mesh(new THREE.ConeGeometry(1.9, 1.0, 4), new THREE.MeshLambertMaterial({ color: 0x3a3f46 }));
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(1.9, 1.0, 4), white);
       cap.rotation.y = Math.PI / 4;
       cap.position.set(cx, H + 3.1, D / 2 - 3.6);
       group.add(cap);
     }
 
-    // 正面中央山牆 (入口強調)
+    // 正面中央巴洛克山牆 (Baroque Pediment)
     const pedShape = new THREE.Shape();
-    pedShape.moveTo(-4.5, 0); pedShape.lineTo(4.5, 0); pedShape.lineTo(0, 3.2); pedShape.lineTo(-4.5, 0);
+    pedShape.moveTo(-5.0, 0);
+    pedShape.lineTo(5.0, 0);
+    pedShape.lineTo(0, 3.6);
+    pedShape.closePath();
     const ped = new THREE.Mesh(new THREE.ExtrudeGeometry(pedShape, { depth: 1.4, bevelEnabled: false }), white);
     ped.position.set(0, H + 0.9, D / 2 - 1.4);
     group.add(ped);
 
-    // 金字招牌「宮原眼科」
+    // 山牆中央圓形勳章浮雕 (Baroque Medallion Cartouche)
+    const cartouche = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.25, 16), white);
+    cartouche.rotation.x = Math.PI / 2;
+    cartouche.position.set(0, H + 2.4, D / 2 + 0.05);
+    group.add(cartouche);
+
+    // 經典燙金復古書法大招牌「宮原眼科」
     const sign = new THREE.Mesh(
-      new THREE.PlaneGeometry(10, 1.9),
+      new THREE.PlaneGeometry(10.5, 2.0),
       new THREE.MeshBasicMaterial({ map: signTexture('宮原眼科') })
     );
-    sign.position.set(0, 4.55, D / 2 + 0.05);
+    sign.position.set(0, 4.6, D / 2 + 0.05);
     group.add(sign);
 
-    // 騎樓地面
-    const floor = new THREE.Mesh(new THREE.BoxGeometry(W + 1, 0.25, D + 1), new THREE.MeshLambertMaterial({ color: 0x9a948a }));
-    floor.position.y = 0.12;
+    // 騎樓洗石子與紅地磚地面
+    const floor = new THREE.Mesh(new THREE.BoxGeometry(W + 2, 0.35, D + 4), new THREE.MeshLambertMaterial({ color: 0x9a948a }));
+    floor.position.set(0, 0.175, 1.0);
+    floor.receiveShadow = true;
     group.add(floor);
 
     return group;
