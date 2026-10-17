@@ -6924,9 +6924,14 @@ export class TaichungRushApp {
 
           if (!box.isEmpty()) {
             const center = box.getCenter(new THREE.Vector3());
-            innerModel.position.x = -center.x;
-            innerModel.position.z = -center.z;
-            innerModel.position.y = -box.min.y; // 建築底端精準平貼路面 Y = 0，徹底消除多餘底座，絕不浮空！
+            // 對於全景校園等已在原點精準排布的程序化大型場景，保持自身地坪零點貼齊，絕不二次位移浮空
+            if (lm.id === 'tcivs') {
+              innerModel.position.set(0, 0, 0);
+            } else {
+              innerModel.position.x = -center.x;
+              innerModel.position.z = -center.z;
+              innerModel.position.y = -box.min.y; // 建築底端精準平貼路面 Y = 0，徹底消除多餘底座，絕不浮空！
+            }
           }
 
           parentGroup.add(innerModel);

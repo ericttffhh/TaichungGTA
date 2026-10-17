@@ -686,9 +686,9 @@ export class ProceduralLandmarks {
     // 水池兩側對稱常綠樹球與花圃步道
     [-1, 1].forEach(side => {
       for (let z = 100; z <= 155; z += 12) {
-        const shrub = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 8),
+        const shrub = new THREE.Mesh(new THREE.SphereGeometry(1.4, 8, 8),
           new THREE.MeshLambertMaterial({ color: 0x1b5e20 }));
-        shrub.position.set(poolX + side * 14.5, 1.5, z);
+        shrub.position.set(poolX + side * 14.5, 1.45, z);
         group.add(shrub);
       }
     });
@@ -970,12 +970,24 @@ export class ProceduralLandmarks {
     group.add(gym);
 
     // 標誌性亮橘色半圓拱弧形大屋頂 (Signature Orange Barrel Roof)
-    const gymRoof = new THREE.Mesh(
-      new THREE.CylinderGeometry(gymD / 2 + 0.5, gymD / 2 + 0.5, gymW + 2, 28, 1, false, 0, Math.PI),
-      gymOrangeRoofMat
-    );
-    gymRoof.rotation.x = Math.PI / 2;
-    gymRoof.rotation.z = Math.PI / 2;
+    // 使用精確向上起拱二維截面放樣，頂底完全在 Y >= 16m 之上，絕不穿入地下或導致整體包圍盒浮空
+    const roofH = 6.5;
+    const roofShape = new THREE.Shape();
+    roofShape.moveTo(-gymD / 2, 0);
+    for (let i = 0; i <= 20; i++) {
+      const t = i / 20;
+      const x = -gymD / 2 + t * gymD;
+      const y = (1 - Math.pow(x / (gymD / 2), 2)) * roofH;
+      roofShape.lineTo(x, y);
+    }
+    roofShape.lineTo(gymD / 2, 0);
+    roofShape.closePath();
+
+    const roofGeom = new THREE.ExtrudeGeometry(roofShape, { depth: gymW, bevelEnabled: false });
+    roofGeom.center();
+    roofGeom.translate(0, roofH / 2, 0);
+    const gymRoof = new THREE.Mesh(roofGeom, gymOrangeRoofMat);
+    gymRoof.rotation.y = Math.PI / 2;
     gymRoof.position.set(gymX, gymH, gymZ);
     group.add(gymRoof);
 
